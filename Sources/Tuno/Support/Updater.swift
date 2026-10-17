@@ -46,12 +46,14 @@ final class Updater {
         }
         if let updater = controller?.updater {
             delegate.resumePendingCritical(updater)
-            // Sparkle ilk açılışta denetim yapmaz; ilk denetim bir gün sonra gelirdi. Kısa bir süre sonra
-            // sessizce bir kez denetlenir: yeni sürüm varsa önerilir, yeni kurulum panelde aynı gün görünür.
-            if updater.automaticallyChecksForUpdates, updater.lastUpdateCheckDate == nil {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak updater] in
+            // Bu sürümle henüz başarılı bir denetim yoksa (yeni kurulum, güncelleme, yeniden kurulum) kısa süre
+            // sonra sessizce denetle: yönetim paneli Mac'i aynı dakika yeni sürümde görür. Sparkle bunu ilk açılışta
+            // hiç, sonrasında da ancak bir sonraki zamanlanmış denetimde yapardı. Başarısız olursa sonraki açılışta yeniden.
+            if updater.automaticallyChecksForUpdates, UpdateDelegate.reportedVersion != UpdateDelegate.currentVersion {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak updater] in
                     MainActor.assumeIsolated {
-                        guard let updater, updater.lastUpdateCheckDate == nil else { return }
+                        guard let updater, !updater.sessionInProgress,
+                              UpdateDelegate.reportedVersion != UpdateDelegate.currentVersion else { return }
                         updater.checkForUpdatesInBackground()
                     }
                 }
@@ -72,6 +74,13 @@ final class Updater {
 final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
     private let pendingKey = "pendingCriticalUpdate"
     private var retry: Timer?
+    /// Bu denetimle giden kurulum işareti; ancak denetim başarılı olunca gönderilmiş sayılır.
+    private var sentMilestone: String?
+
+    private static let reportedKey = "tunoReportedVersion"
+    static var currentVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0" }
+    /// En son hangi sürümle başarılı bir güncelleme denetimi yapıldı.
+    static var reportedVersion: String? { UserDefaults.standard.string(forKey: reportedKey) }
 
     /// Güncelleme denetimiyle giden anonim bilgiler: macOS sürümü, Mac modeli, işlemci mimarisi.
     /// Yönetim panelindeki macOS ve Mac dağılımı bunlardan çıkar; kişi ya da cihaz kimliği gönderilmez.
@@ -82,10 +91,18 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
             ["key": "arch", "value": SystemInfo.architecture, "displayKey": "İşlemci", "displayValue": SystemInfo.architecture],
         ]
         // Dönüşüm hunisi için iki tek seferlik işaret: ilk denetim ve kurulumdan bir hafta sonraki ilk denetim.
-        if let milestone = Milestones.next() {
+        sentMilestone = Milestones.pending()
+        if let milestone = sentMilestone {
             parameters.append(["key": milestone, "value": "1", "displayKey": milestone, "displayValue": "1"])
         }
         return parameters
+    }
+
+    /// Denetim sunucuya ulaştı: işaret gönderilmiş, bu sürüm bildirilmiş sayılır.
+    func updater(_ updater: SPUUpdater, didFinishLoading appcast: SUAppcast) {
+        if let milestone = sentMilestone { Milestones.markSent(milestone) }
+        sentMilestone = nil
+        UserDefaults.standard.set(Self.currentVersion, forKey: Self.reportedKey)
     }
 
     func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
@@ -105,7 +122,7 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
     /// Önceki açılışta ertelenmiş bir kritik güncelleme varsa birkaç saniye sonra yeniden sorar.
     func resumePendingCritical(_ updater: SPUUpdater) {
         guard let pending = UserDefaults.standard.string(forKey: pendingKey) else { return }
-        let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        let current = Self.currentVersion
         if current.compare(pending, options: .numeric) != .orderedAscending {
             UserDefaults.standard.removeObject(forKey: pendingKey)   // kurulmuş
             return
@@ -123,8 +140,9 @@ enum Milestones {
     private static let firstKey = "tunoReportedFirst"
     private static let weekKey = "tunoReportedWeek"
 
-    /// Bu denetimde gönderilecek işaret: "first", "week" ya da yok.
-    static func next() -> String? {
+    /// Bu denetimle gönderilecek işaret: "first", "week" ya da yok. Gönderilmiş sayılması için denetimin
+    /// başarılı olması gerekir (markSent); ağ hatasında bir sonraki denetimde yeniden gider.
+    static func pending() -> String? {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: installKey) == nil {
             // Sparkle daha önce denetim yaptıysa bu Mac'te Tuno zaten kuruluydu: yeni kurulum sayılmaz.
@@ -132,16 +150,16 @@ enum Milestones {
             defaults.set(existing ? Date.distantPast : Date(), forKey: installKey)
             if existing { defaults.set(true, forKey: firstKey); defaults.set(true, forKey: weekKey) }
         }
-        if !defaults.bool(forKey: firstKey) {
-            defaults.set(true, forKey: firstKey)
-            return "first"
-        }
+        if !defaults.bool(forKey: firstKey) { return "first" }
         if !defaults.bool(forKey: weekKey), let installed = defaults.object(forKey: installKey) as? Date,
            Date().timeIntervalSince(installed) >= 7 * 86400 {
-            defaults.set(true, forKey: weekKey)
             return "week"
         }
         return nil
+    }
+
+    static func markSent(_ milestone: String) {
+        UserDefaults.standard.set(true, forKey: milestone == "first" ? firstKey : weekKey)
     }
 }
 
