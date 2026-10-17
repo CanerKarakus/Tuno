@@ -30,6 +30,12 @@ macOS 15 or later on a Mac with Apple silicon.
 
 Get the latest version at [gettuno.info](https://gettuno.info). Official builds are signed and notarized by Apple (Developer ID: 72XQ32HJ4C) and update themselves.
 
+Or install with Homebrew:
+
+```sh
+brew install --cask canerkarakus/tuno/tuno
+```
+
 ## Build from source
 
 You'll need Xcode 16 or later.
@@ -62,7 +68,7 @@ Copyright © 2026 Caner Karakuş – [Geido Studio](https://geidostudio.com)
 
 Tuno, macOS'ta eksik olan kontrolleri tek bir menü çubuğu uygulamasında toplar: uygulama başına ses, HDMI ve DisplayPort ekranlarda ses, sistem geneli ekolayzer, ayrı kaydırma yönleri, harici ekran parlaklığı, pencere geçişi ve pano geçmişi.
 
-**İndir:** [gettuno.info](https://gettuno.info). Resmî sürümler Apple tarafından imzalı ve onaylıdır (Developer ID: 72XQ32HJ4C).
+**İndir:** [gettuno.info](https://gettuno.info) ya da Homebrew ile `brew install --cask canerkarakus/tuno/tuno`. Resmî sürümler Apple tarafından imzalı ve onaylıdır (Developer ID: 72XQ32HJ4C).
 
 **Derle:** Xcode 16 ya da üstüyle `./scripts/build-app.sh`, ardından `open build/Tuno.app`.
 
