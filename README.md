@@ -1,88 +1,71 @@
-# Tuno
+<p align="center">
+  <a href="https://gettuno.info"><img src="https://gettuno.info/og.png" alt="Tuno for macOS" width="720"></a>
+</p>
 
-macOS'ta Windows'un aksine yerleşik olarak bulunmayan ses denetimlerini getiren yerel (SwiftUI + Core Audio) bir uygulama.
+<h1 align="center">Tuno</h1>
 
-## Neden?
+<p align="center">
+  The missing controls for your Mac.<br>
+  <a href="https://gettuno.info">gettuno.info</a>
+</p>
 
-Mac kullanıcılarının en sık şikâyet ettiği ses eksikleri:
+---
 
-| Eksik | Windows | macOS | Tuno |
-|---|---|---|---|
-| Uygulama başına ses düzeyi (mikser) | ✅ | ❌ | ✅ |
-| Uygulamayı sessize alma | ✅ | ❌ | ✅ |
-| Uygulamaya özel çıkış aygıtı | ✅ | ❌ | ✅ |
-| %100 üzeri ses yükseltme | kısmen | ❌ | ✅ (%200'e kadar) |
-| Hızlı aygıt değiştirme, denge, örnekleme hızı | ✅ | dağınık | ✅ |
-| HDMI/DisplayPort ekranlarda ses denetimi | ✅ | ❌ | ✅ (yazılımsal + ses tuşları) |
-| Sistem geneli ekolayzer | ✅ (sürücüyle) | ❌ | ✅ (10 bant, aygıt profilleri) |
-| Öndeki uygulamanın sesi için kısayol | ❌ | ❌ | ✅ |
-| Mikrofon seviye testi | ✅ | ✅ | ✅ |
-| Trackpad ve fare için ayrı kaydırma yönü | ✅ | ❌ | ✅ (önizlemeli) |
-| Trackpad ve fare için ayrı geri/ileri yönü | – | ❌ | ✅ (önizlemeli) |
-| Tekerlekli farede yumuşak kaydırma | ✅ | ❌ | ✅ |
-| Fare hızlandırmasını kapatma | ✅ | ❌ | ✅ |
-| Fare yan/orta tuş atama (Safari'de geri/ileri dahil) | ✅ | ❌ | ✅ |
-| Trackpad'de orta tık | ✅ | ❌ | ✅ (üç parmak dokunuşu) |
-| Ses aygıtı öncelik kuralları | kısmen | ❌ | ✅ |
-| Harici monitör parlaklığı | ✅ | ❌ | ✅ (DDC/CI + yazılımsal) |
-| Pencereler arası Alt-Tab | ✅ | ❌ | ✅ (⌥⇥) |
-| Görev çubuğu/Dock pencere önizlemesi | ✅ | ❌ | ✅ |
-| Pano geçmişi | ✅ (Win+V) | ❌ | ✅ (⌘⇧V) |
+Tuno is a native menu bar app that brings the controls macOS leaves out, in one quiet place. Built with SwiftUI and Core Audio. No drivers, no kernel extensions.
 
-## Nasıl çalışır?
+## Features
 
-Sürücü kurmadan, macOS 14.2 ile gelen **Core Audio Process Tap** API'si kullanılır:
+- **Sound** — Volume for every app, a separate output for any app, volume control for HDMI and DisplayPort displays, a system-wide equalizer with device profiles.
+- **Devices** — Priority rules that pick the right speakers and microphone when you plug things in. A quick microphone level test.
+- **Mouse & Trackpad** — Separate scroll directions, smooth scrolling for wheel mice, pointer acceleration off, side buttons for back and forward, middle click on the trackpad.
+- **Displays** — Brightness for external monitors, from the menu bar or the keyboard.
+- **Windows** — A window switcher with live previews, window previews in the Dock, and snapping to halves, thirds and quarters.
+- **Everyday** — Clipboard history, Finder shortcuts, battery health and keep awake.
 
-```
-uygulama süreçleri ─▶ uygulama tap'i ─┐
-                                      ├─▶ TapDSP: kazanç × yazılım sesi × ön kazanç → 10 bant EQ → limiter ─▶ aygıt
-geri kalan tüm ses ─▶ aygıt tap'i ────┘   (Tuno'nun kendi süreci ve uygulama tap'leri hariç tutulur)
-```
+## Requirements
 
-Yalnızca gerekince tap kurulur: ayarı değiştirilen uygulamalar için uygulama tap'i; EQ açıkken ya da
-yazılımsal ses kullanılırken "geri kalan" aygıt tap'i. Kurulan tap'ler değişikliklerde yıkılmaz, yerinde güncellenir.
-İlk kullanımda macOS **Ses Kaydı** izni ister (ses kaydedilmez, hiçbir yere gönderilmez).
+macOS 15 or later on a Mac with Apple silicon.
 
-## Derleme
+## Download
+
+Get the latest version at [gettuno.info](https://gettuno.info). Official builds are signed and notarized by Apple (Developer ID: 72XQ32HJ4C) and update themselves.
+
+## Build from source
+
+You'll need Xcode 16 or later.
 
 ```sh
-./scripts/build-app.sh          # build/Tuno.app (release)
+git clone https://github.com/CanerKarakus/Tuno.git
+cd Tuno
+./scripts/build-app.sh
 open build/Tuno.app
 ```
 
-Gereksinimler: macOS 15+, Xcode 16+ (Swift 6). Kod Xcode'da `Package.swift` açılarak da düzenlenebilir;
-ancak tap izni için uygulamanın `build-app.sh` ile paketlenmiş hâli çalıştırılmalıdır (Info.plist gerekir).
+The script packages the app with its Info.plist and entitlements, which macOS needs before it grants audio and accessibility permissions. You can also open `Package.swift` in Xcode to edit the code.
 
-> Betik Keychain'deki "Apple Development" sertifikasıyla imzalar; böylece Ses Kaydı ve Erişilebilirlik izinleri derlemeler arasında korunur. Sertifika yoksa ad-hoc imzalar.
+## Privacy
 
-## Yapı
+Tuno asks for a permission only when a feature needs it. Audio is processed in real time and never recorded, and nothing you copy or hear leaves your Mac.
 
-```
-Sources/Tuno/
-  App/        TunoApp (pencere + menü çubuğu), ContentView (kenar çubuğu)
-  CoreAudio/  AudioObject yardımcıları, AudioDevice, AudioProcess, AudioTap, AudioDSP (biquad EQ + limiter)
-  Model/      DeviceStore + DeviceRules, Mixer (ses motoru), Equalizer, ShortcutCenter, InputMeter,
-              PointerController (kaydırma, tuşlar, hızlandırma), MultitouchMonitor, DisplayController (DDC),
-              WindowCatalog + WindowSwitcher + DockPreviews, ClipboardHistory
-  Support/    KeyboardLayout, SyntheticEvent, Glass
-  Views/      Mikser, Çıkış/Giriş, Ekolayzer, Kısayollar, Genel, Hakkında, Menü çubuğu, VolumeHUD
-```
+## License
 
-## Yol haritası
+Tuno is open source under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may download, study, change and use it for any noncommercial purpose. Selling it, publishing it commercially or including it in a paid product is not permitted.
 
-- [x] Faz 1: Uygulama mikseri, ses yükseltme, uygulama başına çıkış, aygıt sayfaları, menü çubuğu
-- [x] Faz 2: HDMI/DisplayPort için yazılımsal ses, sistem geneli 10 bant ekolayzer + hazır ayarlar
-- [x] Faz 3: Klavye kısayolları + HUD, ses tuşları (yazılımsal ses), aygıt EQ profilleri, mikrofon testi
-- [x] Fare/Trackpad: aygıta göre ayrı kaydırma ve sayfa geçişi yönü (Sistem Ayarları önizleme videolarıyla)
-- [ ] Fare (devam): yumuşak kaydırma, hızlandırmayı kapatma, yan/orta tuş atamaları
-- [ ] Sonra: özelleştirilebilir kısayollar, uygulama ayarlarının aygıta göre profillenmesi, Sparkle ile güncelleme, notarizasyon
+Copyright © 2026 Caner Karakuş – [Geido Studio](https://geidostudio.com)
 
-## Lisans
+---
 
-Tuno açık kaynaktır: [PolyForm Noncommercial 1.0.0](LICENSE). Kodu indirip inceleyebilir, değiştirebilir ve kişisel ya da ticari olmayan amaçlarla kullanabilirsiniz. Ticari amaçla yayınlamak, satmak ya da ücretli bir ürüne katmak lisansa aykırıdır.
+<details>
+<summary><b>Türkçe</b></summary>
 
-Tuno is open source under the [PolyForm Noncommercial License 1.0.0](LICENSE): you may download, study, modify and use it for any noncommercial purpose. Publishing it commercially, selling it or bundling it into a paid product is not permitted.
+<br>
 
-Telif © 2026 Caner Karakuş - Geido Studio ([geidostudio.com](https://geidostudio.com)). Resmî sürümler [gettuno.info](https://gettuno.info) adresinden dağıtılır ve Apple tarafından imzalı ve onaylıdır (Developer ID: 72XQ32HJ4C).
+Tuno, macOS'ta eksik olan kontrolleri tek bir menü çubuğu uygulamasında toplar: uygulama başına ses, HDMI ve DisplayPort ekranlarda ses, sistem geneli ekolayzer, ayrı kaydırma yönleri, harici ekran parlaklığı, pencere geçişi ve pano geçmişi.
 
-Copyright © 2026 Caner Karakuş - Geido Studio. Official builds are distributed from gettuno.info and are signed & notarized by Apple (Developer ID: 72XQ32HJ4C).
+**İndir:** [gettuno.info](https://gettuno.info). Resmî sürümler Apple tarafından imzalı ve onaylıdır (Developer ID: 72XQ32HJ4C).
+
+**Derle:** Xcode 16 ya da üstüyle `./scripts/build-app.sh`, ardından `open build/Tuno.app`.
+
+**Lisans:** Açık kaynak, [PolyForm Noncommercial 1.0.0](LICENSE). İndirip inceleyebilir, değiştirebilir ve ticari olmayan her amaçla kullanabilirsiniz. Satmak, ticari olarak yayınlamak ya da ücretli bir ürüne katmak lisansa aykırıdır.
+
+</details>
