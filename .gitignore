@@ -1,0 +1,13 @@
+# Derleme çıktıları
+build/
+.build/
+.swiftpm/
+release/
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Kişisel / sistem
+.DS_Store
+.vscode/
+aaaaa.md
