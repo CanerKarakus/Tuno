@@ -59,11 +59,52 @@ final class Mixer {
             MainActor.assumeIsolated { self?.refresh() }
         }
         // IsRunningOutput için süreç başına dinleyici yerine hafif bir yoklama.
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refresh() }
-        }
+        observePanel()
+        schedulePolling()
         refresh()
         reconcile()
+    }
+
+    /// Menü paneli ya da Uygulama Sesleri sayfası açıkken ses çalan uygulamalar saniyede bir, kapalıyken
+    /// iki saniyede bir yoklanır: arka planda daha az uyanır. Yeni süreçleri zaten PropertyListener anında bildirir.
+    @ObservationIgnored private var panelOpen = false
+    @ObservationIgnored private var pageVisible = false
+    @ObservationIgnored private var panelObservers: [NSObjectProtocol] = []
+    private var isWatched: Bool { panelOpen || pageVisible }
+
+    /// Uygulama Sesleri sayfası göründüğünde ve kaybolduğunda (MixerView).
+    func setPageVisible(_ visible: Bool) {
+        let was = isWatched
+        pageVisible = visible
+        watchedChanged(from: was)
+    }
+
+    private func observePanel() {
+        let center = NotificationCenter.default
+        for (name, open) in [(Notification.Name.tunoPanelWillOpen, true), (.tunoPanelDidClose, false)] {
+            panelObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let was = self.isWatched
+                    self.panelOpen = open
+                    self.watchedChanged(from: was)
+                }
+            })
+        }
+    }
+
+    private func watchedChanged(from was: Bool) {
+        guard isWatched != was else { return }
+        if isWatched { refresh() }
+        schedulePolling()
+    }
+
+    private func schedulePolling() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: isWatched ? 1 : 2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+        timer?.tolerance = isWatched ? 0.1 : 0.5
     }
 
     func settings(for app: AudioApp) -> AppAudioSettings { settings[app.id] ?? AppAudioSettings() }

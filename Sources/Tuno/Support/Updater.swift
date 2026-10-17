@@ -44,7 +44,19 @@ final class Updater {
             let value = updater.canCheckForUpdates
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.canCheck = value } }
         }
-        if let updater = controller?.updater { delegate.resumePendingCritical(updater) }
+        if let updater = controller?.updater {
+            delegate.resumePendingCritical(updater)
+            // Sparkle ilk açılışta denetim yapmaz; ilk denetim bir gün sonra gelirdi. Kısa bir süre sonra
+            // sessizce bir kez denetlenir: yeni sürüm varsa önerilir, yeni kurulum panelde aynı gün görünür.
+            if updater.automaticallyChecksForUpdates, updater.lastUpdateCheckDate == nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak updater] in
+                    MainActor.assumeIsolated {
+                        guard let updater, updater.lastUpdateCheckDate == nil else { return }
+                        updater.checkForUpdatesInBackground()
+                    }
+                }
+            }
+        }
     }
 
     func checkForUpdates() {

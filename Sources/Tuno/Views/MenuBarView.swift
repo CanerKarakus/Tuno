@@ -143,6 +143,7 @@ private struct HeaderButton: View {
 
 extension Notification.Name {
     static let tunoPanelWillOpen = Notification.Name("app.tuno.panelWillOpen")
+    static let tunoPanelDidClose = Notification.Name("app.tuno.panelDidClose")
 }
 
 // MARK: - Modüller

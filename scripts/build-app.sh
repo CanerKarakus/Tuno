@@ -41,6 +41,8 @@ if [[ -n "${TUNO_FEED_URL:-}" && -n "${TUNO_PUBLIC_KEY:-}" ]]; then
   plist_set SUFeedURL string "$TUNO_FEED_URL"
   plist_set SUPublicEDKey string "$TUNO_PUBLIC_KEY"
   plist_set SUEnableAutomaticChecks bool true
+  # Güncellemenin EdDSA imzası açmadan önce doğrulanır (Sparkle 2.10+; tüm sürümler ve farklar imzalı).
+  plist_set SUVerifyUpdateBeforeExtraction bool true
 fi
 
 # İmza. Kalıcı bir kimlik, macOS izinlerinin her derlemede sıfırlanmasını önler.

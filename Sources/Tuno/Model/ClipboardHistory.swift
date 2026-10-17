@@ -166,7 +166,8 @@ final class ClipboardHistory {
     private static var storeURL: URL {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Tuno", isDirectory: true)
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                                 attributes: [.posixPermissions: 0o700])
         return directory.appendingPathComponent("clipboard.json")
     }
 
@@ -179,7 +180,13 @@ final class ClipboardHistory {
             }
         }
         if let data = try? JSONEncoder().encode(stored) {
-            try? data.write(to: Self.storeURL, options: .atomic)
+            var url = Self.storeURL
+            try? data.write(to: url, options: .atomic)
+            // Kopyalanan metinler hassas olabilir: yalnızca bu kullanıcı okuyabilir ve Time Machine yedeğine girmez.
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? url.setResourceValues(values)
         }
     }
 

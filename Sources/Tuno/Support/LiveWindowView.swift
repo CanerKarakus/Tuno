@@ -118,16 +118,16 @@ final class WindowStream: @unchecked Sendable {
                 if elapsed < interval { try? await Task.sleep(for: interval - elapsed) }
             }
         }
-        lock.lock()
-        if stopped { task.cancel() } else { self.task = task }
-        lock.unlock()
+        lock.withLock {
+            if stopped { task.cancel() } else { self.task = task }
+        }
     }
 
     func stop() {
-        lock.lock()
-        stopped = true
-        task?.cancel()
-        task = nil
-        lock.unlock()
+        lock.withLock {
+            stopped = true
+            task?.cancel()
+            task = nil
+        }
     }
 }

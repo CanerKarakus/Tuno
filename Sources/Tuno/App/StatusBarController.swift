@@ -140,6 +140,7 @@ final class StatusBarController: NSObject {
         guard isOpen else { return }
         isOpen = false
         lastClose = Date()
+        NotificationCenter.default.post(name: .tunoPanelDidClose, object: nil)
         statusItem.button?.highlight(false)
         removeMonitors()
 

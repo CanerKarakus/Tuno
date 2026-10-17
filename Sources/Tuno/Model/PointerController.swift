@@ -279,11 +279,11 @@ final class PointerController {
     }
 
     /// Yakalama durumunu ve son algılanan aygıtı arayüze taşır; yeni bağlanan
-    /// dokunmatik aygıtları (ör. Magic Mouse) da ara ara tarar.
+    /// dokunmatik aygıtları (ör. Magic Mouse) da ara ara tarar. Saniyede bir: arka planda boşuna uyanmasın.
     private func startStatusTimer() {
         statusTimer?.invalidate()
         var ticks = 0
-        statusTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        statusTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
                 ticks += 1
@@ -295,7 +295,7 @@ final class PointerController {
                 default: nil
                 }
                 if detected != self.lastDetected { self.lastDetected = detected }
-                if ticks % 20 == 0 {
+                if ticks % 5 == 0 {
                     MultitouchMonitor.shared.scan()
                     self.acceleration.refresh()   // yeni bağlanan farelere de uygula
                 }

@@ -51,6 +51,8 @@ struct MixerView: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear { mixer.setPageVisible(true) }
+        .onDisappear { mixer.setPageVisible(false) }
     }
 }
 
