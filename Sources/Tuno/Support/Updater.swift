@@ -82,13 +82,14 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
     /// En son hangi sürümle başarılı bir güncelleme denetimi yapıldı.
     static var reportedVersion: String? { UserDefaults.standard.string(forKey: reportedKey) }
 
-    /// Güncelleme denetimiyle giden anonim bilgiler: macOS sürümü, Mac modeli, işlemci mimarisi.
+    /// Güncelleme denetimiyle giden anonim bilgiler: macOS sürümü, Mac modeli, işlemci mimarisi ve rastgele kurulum numarası.
     /// Yönetim panelindeki macOS ve Mac dağılımı bunlardan çıkar; kişi ya da cihaz kimliği gönderilmez.
     func feedParameters(for updater: SPUUpdater, sendingSystemProfile sendingProfile: Bool) -> [[String: String]] {
         var parameters = [
             ["key": "os", "value": SystemInfo.osVersion, "displayKey": "macOS", "displayValue": SystemInfo.osVersion],
             ["key": "model", "value": SystemInfo.model, "displayKey": "Mac", "displayValue": SystemInfo.model],
             ["key": "arch", "value": SystemInfo.architecture, "displayKey": "İşlemci", "displayValue": SystemInfo.architecture],
+            ["key": "id", "value": InstallID.value, "displayKey": "Kurulum", "displayValue": InstallID.value],
         ]
         // Dönüşüm hunisi için iki tek seferlik işaret: ilk denetim ve kurulumdan bir hafta sonraki ilk denetim.
         sentMilestone = Milestones.pending()
@@ -160,6 +161,20 @@ enum Milestones {
 
     static func markSent(_ milestone: String) {
         UserDefaults.standard.set(true, forKey: milestone == "first" ? firstKey : weekKey)
+    }
+}
+
+/// Rastgele kurulum numarası: yalnızca kaç Mac'te kurulu olduğunu ve hangi sürümde olduğunu saymak için
+/// güncelleme denetimiyle gider. Cihazdan, donanımdan ya da kişiden türetilmez; ilk açılışta üretilir ve
+/// Tuno'nun ayarlarında durur (ayarlar silinirse yenisi üretilir).
+enum InstallID {
+    private static let key = "tunoInstallID"
+
+    static var value: String {
+        if let id = UserDefaults.standard.string(forKey: key), id.count == 32 { return id }
+        let id = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+        UserDefaults.standard.set(id, forKey: key)
+        return id
     }
 }
 

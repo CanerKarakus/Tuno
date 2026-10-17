@@ -78,7 +78,7 @@ struct GeneralView: View {
                 } header: {
                     Text("Gizlilik")
                 } footer: {
-                    Text("Güncelleme denetimi yalnızca Tuno sürümünü, macOS sürümünü ve Mac modelini anonim olarak gönderir. Çökme raporlarında kişisel dosyalar ve adınız yer almaz.")
+                    Text("Güncelleme denetimi yalnızca Tuno sürümünü, macOS sürümünü, Mac modelini ve kurulumları saymak için rastgele bir numarayı anonim olarak gönderir. Çökme raporlarında kişisel dosyalar ve adınız yer almaz.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
