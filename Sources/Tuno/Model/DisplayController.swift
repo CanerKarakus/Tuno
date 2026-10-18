@@ -69,14 +69,18 @@ final class DisplayController {
         // dinlemiyor demektir (çoğu HDMI bağlantısı, bazı monitörler): yazılımsal karartmaya geç.
         for (id, service) in services {
             service.readBrightness { [weak self] value in
-                MainActor.assumeIsolated {
-                    guard let self, let index = self.displays.firstIndex(where: { $0.id == id }) else { return }
-                    if let value {
-                        self.displays[index].brightness = value
-                    } else {
-                        self.services[id] = nil
-                        self.displays[index].supportsDDC = false
-                        self.applyOverlay(self.displays[index].brightness, for: id)
+                // Okuma DDC kuyruğunda biter; sonuç ana iş parçacığında işlenir. Doğrudan assumeIsolated
+                // macOS 27.0.1'de (Swift eşzamanlılık denetimi) Tuno'yu kapatıyordu.
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        guard let self, let index = self.displays.firstIndex(where: { $0.id == id }) else { return }
+                        if let value {
+                            self.displays[index].brightness = value
+                        } else {
+                            self.services[id] = nil
+                            self.displays[index].supportsDDC = false
+                            self.applyOverlay(self.displays[index].brightness, for: id)
+                        }
                     }
                 }
             }

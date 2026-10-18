@@ -49,11 +49,13 @@ final class Updater {
             // Bu sürümle henüz başarılı bir denetim yoksa (yeni kurulum, güncelleme, yeniden kurulum) kısa süre
             // sonra sessizce denetle: yönetim paneli Mac'i aynı dakika yeni sürümde görür. Sparkle bunu ilk açılışta
             // hiç, sonrasında da ancak bir sonraki zamanlanmış denetimde yapardı. Başarısız olursa sonraki açılışta yeniden.
-            if updater.automaticallyChecksForUpdates, UpdateDelegate.reportedVersion != UpdateDelegate.currentVersion {
+            // Son denetimin üzerinden bir saatten fazla geçtiyse de açılışta denetlenir: kritik bir düzeltme,
+            // Tuno yeniden açılan Mac'e Sparkle'ın 6 saatlik aralığını beklemeden ulaşsın.
+            let stale = (updater.lastUpdateCheckDate ?? .distantPast).timeIntervalSinceNow < -3600
+            if updater.automaticallyChecksForUpdates, UpdateDelegate.reportedVersion != UpdateDelegate.currentVersion || stale {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak updater] in
                     MainActor.assumeIsolated {
-                        guard let updater, !updater.sessionInProgress,
-                              UpdateDelegate.reportedVersion != UpdateDelegate.currentVersion else { return }
+                        guard let updater, !updater.sessionInProgress else { return }
                         updater.checkForUpdatesInBackground()
                     }
                 }
