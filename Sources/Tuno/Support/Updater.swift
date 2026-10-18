@@ -64,6 +64,12 @@ final class Updater {
     func checkForUpdates() {
         controller?.checkForUpdates(nil)
     }
+
+    /// Sessiz denetim (ör. destek sabitlemesi kalkınca son sürüm hemen önerilsin).
+    func checkInBackground() {
+        guard let updater = controller?.updater, !updater.sessionInProgress else { return }
+        updater.checkForUpdatesInBackground()
+    }
 }
 
 /// Güncelleme denetimine anonim sistem bilgisi ekler ve kritik güncellemelerin ertelenmesine izin vermez.
@@ -78,7 +84,7 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
     private var sentMilestone: String?
 
     private static let reportedKey = "tunoReportedVersion"
-    static var currentVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0" }
+    nonisolated static var currentVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0" }
     /// En son hangi sürümle başarılı bir güncelleme denetimi yapıldı.
     static var reportedVersion: String? { UserDefaults.standard.string(forKey: reportedKey) }
 
@@ -106,6 +112,16 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
         UserDefaults.standard.set(Self.currentVersion, forKey: Self.reportedKey)
     }
 
+    /// Destekle eski bir sürüme geçen Mac o sürümde tutulur: güncelleme yokmuş gibi davranılır (SupportPin).
+    func bestValidUpdate(in appcast: SUAppcast, for updater: SPUUpdater) -> SUAppcastItem? {
+        guard let pinned = SupportPin.version else { return nil }
+        guard pinned == Self.currentVersion else {
+            SupportPin.set(nil)
+            return nil
+        }
+        return SUAppcastItem.empty()
+    }
+
     func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
         if item.isCriticalUpdate {
             UserDefaults.standard.set(item.displayVersionString, forKey: pendingKey)
@@ -122,7 +138,7 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
 
     /// Önceki açılışta ertelenmiş bir kritik güncelleme varsa birkaç saniye sonra yeniden sorar.
     func resumePendingCritical(_ updater: SPUUpdater) {
-        guard let pending = UserDefaults.standard.string(forKey: pendingKey) else { return }
+        guard let pending = UserDefaults.standard.string(forKey: pendingKey), SupportPin.version == nil else { return }
         let current = Self.currentVersion
         if current.compare(pending, options: .numeric) != .orderedAscending {
             UserDefaults.standard.removeObject(forKey: pendingKey)   // kurulmuş

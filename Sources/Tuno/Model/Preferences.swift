@@ -6,7 +6,7 @@ enum PreferenceKey {
 }
 
 enum Page: String, CaseIterable, Identifiable, Hashable {
-    case mixer, output, input, equalizer, pointer, shortcuts, displays, windows, finder, clipboard, battery, general, about
+    case mixer, output, input, equalizer, pointer, shortcuts, displays, windows, finder, clipboard, battery, general, support, about
 
     var id: Self { self }
 
@@ -24,6 +24,7 @@ enum Page: String, CaseIterable, Identifiable, Hashable {
         case .clipboard: "Pano Geçmişi"
         case .battery: "Pil"
         case .general: "Genel"
+        case .support: "Destek"
         case .about: "Hakkında"
         }
     }
@@ -42,6 +43,7 @@ enum Page: String, CaseIterable, Identifiable, Hashable {
         case .clipboard: "doc.on.clipboard.fill"
         case .battery: "battery.75percent"
         case .general: "gearshape.fill"
+        case .support: "lifepreserver.fill"
         case .about: "info"
         }
     }

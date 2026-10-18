@@ -24,6 +24,7 @@ struct TunoApp: App {
                 .environment(appDelegate.finderCut)
                 .environment(appDelegate.closeQuitter)
                 .environment(appDelegate.keyboardIndicator)
+                .environment(appDelegate.support)
                 .frame(minWidth: 820, minHeight: 520)
         }
         .defaultSize(width: 880, height: 600)
@@ -55,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     lazy var shortcuts = ShortcutCenter(mixer: mixer, devices: devices, displays: displays)
     let permissions = Permissions()
     let updater = Updater()
+    lazy var support = SupportSession(updater: updater)
     private let crashReporter = CrashReporter()
     let onboarding = OnboardingModel()
     let clipboard = ClipboardHistory()
@@ -69,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusBar: StatusBarController?
     private var windowSwitcher: WindowSwitcher?
     private var microphoneIndicator: NSStatusItem?
+    private var supportIndicator: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         crashReporter.checkAfterLaunch(enabled: updater.isConfigured)
@@ -118,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             VolumeHUD.shared.show(symbol: self.keepAwake.isActive ? "cup.and.heat.waves.fill" : "cup.and.saucer",
                                   title: self.keepAwake.isActive ? "Uyanık tutuluyor" : "Uyku engelleme kapalı")
         }
+        support.onActiveChange = { [weak self] active in self?.updateSupportIndicator(active) }
         devices.onMicrophoneMuteChange = { [weak self] muted in
             self?.updateMicrophoneIndicator(muted)
             VolumeHUD.shared.show(symbol: muted ? "mic.slash.fill" : "mic.fill",
@@ -149,6 +153,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        support.endForQuit()
         inputMeter.stop()
         scroll.shutdown()
         displays.restore()
@@ -180,6 +185,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func unmuteMicrophone() {
         devices.setMicrophoneMuted(false)
+    }
+
+    /// Destek modu açıkken menü çubuğunda bir simge: kullanıcı bağlantının açık olduğunu görür, oradan da sonlandırabilir.
+    private func updateSupportIndicator(_ active: Bool) {
+        guard active else {
+            supportIndicator.map(NSStatusBar.system.removeStatusItem)
+            supportIndicator = nil
+            return
+        }
+        guard supportIndicator == nil else { return }
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        item.button?.image = NSImage(systemSymbolName: "lifepreserver.fill", accessibilityDescription: "Destek modu açık")?
+            .withSymbolConfiguration(.init(paletteColors: [.systemRed]))
+        item.button?.toolTip = "Destek modu açık"
+        let menu = NSMenu()
+        let title = NSMenuItem(title: "Destek modu açık", action: nil, keyEquivalent: "")
+        title.isEnabled = false
+        menu.addItem(title)
+        menu.addItem(.separator())
+        let end = NSMenuItem(title: "Oturumu Sonlandır", action: #selector(endSupportSession), keyEquivalent: "")
+        end.target = self
+        menu.addItem(end)
+        item.menu = menu
+        supportIndicator = item
+    }
+
+    @objc private func endSupportSession() {
+        support.end()
     }
 }
 

@@ -30,6 +30,7 @@ struct ContentView: View {
         case .clipboard: ClipboardSettingsView()
         case .battery: BatteryView()
         case .general: GeneralView()
+        case .support: SupportView()
         case .about: AboutView()
         }
     }
@@ -67,6 +68,7 @@ private struct Sidebar: View {
             }
             Section {
                 row(.general)
+                row(.support)
                 row(.about)
             }
         }
@@ -116,6 +118,7 @@ extension Page {
         case .finder: .blue
         case .clipboard: .brown
         case .battery: .green
+        case .support: .red
         case .general, .about: .gray
         }
     }
