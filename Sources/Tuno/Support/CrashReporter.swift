@@ -50,6 +50,7 @@ final class CrashReporter {
         if Self.policy == .ask {
             guard ask(count: reports.count) else { return }
         }
+        SupportLog.log("çökme", "\(reports.count) çökme raporu bulundu")
         for report in reports.suffix(Self.maxPerLaunch) {
             await send(report.url)
         }
@@ -117,6 +118,8 @@ final class CrashReporter {
             "os": SystemInfo.osVersion,
             "model": SystemInfo.model,
             "arch": SystemInfo.architecture,
+            // Destek ekibi çökmeyi o Mac'in zaman çizelgesinde görebilsin (Tuno Kullanıcı ID'si; kişisel bilgi değil).
+            "sid": SupportID.value,
             "report": text,
         ]
         var request = URLRequest(url: Self.endpoint, timeoutInterval: 30)

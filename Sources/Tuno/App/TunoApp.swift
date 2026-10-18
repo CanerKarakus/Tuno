@@ -74,6 +74,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var supportIndicator: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        SupportLog.log("tuno", "Açıldı: Tuno \(updater.version) · macOS \(SystemInfo.osVersion) · \(SystemInfo.model)")
+        support.app = self
+        SettingsBackup.daily()
         crashReporter.checkAfterLaunch(enabled: updater.isConfigured)
         DockAutoHide.resume()
         SystemHotKeys.restore()
@@ -95,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         permissions.onChange = { [weak self] in
             guard let self else { return }
+            SupportLog.log("izin", PermissionKind.allCases.map { "\($0.title): \(self.permissions.status($0))" }.joined(separator: ", "))
             self.shortcuts.refreshAvailability()
             self.dockPreviews.refreshAvailability()
             self.scroll.refreshSystem()
@@ -153,6 +157,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        SupportLog.log("tuno", "Kapandı")
         support.endForQuit()
         inputMeter.stop()
         scroll.shutdown()

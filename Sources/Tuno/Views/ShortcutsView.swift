@@ -66,13 +66,13 @@ struct ShortcutsView: View {
 private struct ShortcutRow: View {
     let shortcut: Shortcut
     @Environment(ShortcutCenter.self) private var shortcuts
-    @State private var enabled = true
 
     var body: some View {
+        let enabled = shortcuts.isEnabled(shortcut)
         HStack {
             Toggle(shortcut.title, isOn: Binding(
                 get: { enabled },
-                set: { enabled = $0; shortcuts.setEnabled($0, for: shortcut) }))
+                set: { shortcuts.setEnabled($0, for: shortcut) }))
                 .toggleStyle(.checkbox)
             Spacer()
             HStack(spacing: 3) {
@@ -82,7 +82,6 @@ private struct ShortcutRow: View {
             }
             .opacity(enabled ? 1 : 0.4)
         }
-        .onAppear { enabled = shortcuts.isEnabled(shortcut) }
     }
 }
 

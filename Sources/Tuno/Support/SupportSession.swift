@@ -46,7 +46,13 @@ final class SupportSession {
     /// Son oturumun nasıl bittiği ya da destekle yapılan son değişiklik.
     private(set) var notice: String?
     private(set) var pinnedVersion = SupportPin.version
+    /// Bu oturumda destek ekibinin yaptıkları (Destek sayfasında listelenir).
+    private(set) var activity: [String] = []
+    private(set) var verboseUntil = SupportLog.verboseUntil
     @ObservationIgnored var onActiveChange: ((Bool) -> Void)?
+    /// Ayarları okumak ve değiştirmek için (AppDelegate açılışta bağlar).
+    @ObservationIgnored weak var app: AppDelegate?
+    @ObservationIgnored private var sentState: String?
 
     @ObservationIgnored private let updater: Updater
     @ObservationIgnored private var token: String?
@@ -99,6 +105,9 @@ final class SupportSession {
         notice = nil
         handled = []
         acks = []
+        activity = []
+        sentState = nil
+        SupportLog.log("destek", "Destek oturumu açıldı")
         setActive(true)
         startLoop()
     }
@@ -124,6 +133,11 @@ final class SupportSession {
         _ = done.wait(timeout: .now() + 2)
     }
 
+    func stopVerbose() {
+        SupportLog.setVerbose(false)
+        verboseUntil = nil
+    }
+
     func unpin() {
         SupportPin.set(nil)
         pinnedVersion = nil
@@ -137,6 +151,7 @@ final class SupportSession {
     }
 
     private func finish(notice: String) {
+        if token != nil { SupportLog.log("destek", "Destek oturumu kapandı: \(notice)") }
         token = nil
         loop?.cancel()
         loop = nil
@@ -154,14 +169,19 @@ final class SupportSession {
                 guard let self, let token = self.token else { return }
                 let sending = self.acks
                 self.acks = []
+                // Ayarlar yalnızca değiştiyse gönderilir (panel canlı görünümü bundan çizer).
+                var body: [String: Any] = ["action": "sync", "token": token, "acks": sending]
+                let state = self.stateJSON()
+                if let state, state.text != self.sentState { body["state"] = state.object }
                 do {
-                    let (status, reply) = try await Self.post(["action": "sync", "token": token, "acks": sending], timeout: 8)
+                    let (status, reply) = try await Self.post(body, timeout: 8)
                     guard !Task.isCancelled, self.token == token else { return }
                     guard status == 200, reply["status"] as? String == "active" else {
                         self.finish(notice: Self.endNotice(reply["reason"] as? String))
                         return
                     }
                     failures = 0
+                    if let state, body["state"] != nil { self.sentState = state.text }
                     if let remaining = reply["remaining"] as? Int { self.expires = Date().addingTimeInterval(TimeInterval(remaining)) }
                     for command in reply["commands"] as? [[String: Any]] ?? [] { self.handle(command) }
                 } catch {
@@ -199,11 +219,114 @@ final class SupportSession {
             Task { await switchVersion(id: id, payload: payload) }
         case "unpin":
             unpin()
-            notice = "Tuno Destek normal güncellemelere döndürdü."
+            record("Normal güncellemelere döndürüldü")
             ack(id, "done")
+        case "set":
+            guard let app, let key = payload["key"] as? String, let value = payload["value"] else { ack(id, "failed", "Geçersiz istek"); return }
+            do {
+                let change = try SupportSettings(app: app).apply(key: key, value: value)
+                record(change)
+                ack(id, "done", change)
+            } catch {
+                ack(id, "failed", error.localizedDescription)
+            }
+        case "diagnostics":
+            Task { await sendDiagnostics(id: id) }
+        case "verbose":
+            let on = payload["on"] as? Bool ?? false
+            SupportLog.setVerbose(on)
+            verboseUntil = SupportLog.verboseUntil
+            record(on ? "Ayrıntılı günlük açıldı (24 saat)" : "Ayrıntılı günlük kapatıldı")
+            ack(id, "done")
+        case "message":
+            guard let text = payload["text"] as? String, !text.isEmpty else { ack(id, "failed", "Boş mesaj"); return }
+            record("Mesaj: \(text)")
+            ack(id, "done", "Gösterildi")
+            Task { Self.showMessage(String(text.prefix(500))) }
+        case "reset", "restore":
+            Task { await restoreSettings(id: id, backup: command["kind"] as? String == "restore" ? payload["id"] as? String : nil) }
         default:
             ack(id, "failed", "Bu Tuno sürümü bu isteği tanımıyor")
         }
+    }
+
+    private func record(_ text: String) {
+        activity.insert("\(Date().formatted(date: .omitted, time: .shortened)) · \(text)", at: 0)
+        SupportLog.log("destek", text)
+    }
+
+    /// Panelin canlı görünümü için ayarlar; değişiklik denetimi metin üzerinden yapılır.
+    private func stateJSON() -> (object: [String: Any], text: String)? {
+        guard let app else { return nil }
+        let object: [String: Any] = [
+            "pages": SupportSettings(app: app).json(),
+            "verbose": SupportLog.verboseUntil.map { Int($0.timeIntervalSince1970) } as Any,
+            "pinned": SupportPin.version as Any,
+            "backups": SettingsBackup.list().map { ["id": $0.id, "date": Int($0.date.timeIntervalSince1970), "reason": $0.reason] },
+            "version": UpdateDelegate.currentVersion,
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]),
+              let text = String(data: data, encoding: .utf8) else { return nil }
+        return (object, text)
+    }
+
+    private func sendDiagnostics(id: Int) async {
+        guard let app, Diagnostics.confirm() else { ack(id, "declined"); return }
+        guard isActive, let token else { return }
+        ack(id, "running")
+        let package = Diagnostics.build(app: app)
+        do {
+            let (status, _) = try await Self.post(["action": "upload", "token": token, "command": id, "kind": "diagnostics", "data": package], timeout: 60)
+            guard status == 200 else { throw URLError(.badServerResponse) }
+            record("Tanılama paketi gönderildi")
+            ack(id, "done", "Paket alındı")
+        } catch {
+            ack(id, "failed", "Paket gönderilemedi")
+        }
+    }
+
+    private func restoreSettings(id: Int, backup: String?) async {
+        let alert = NSAlert()
+        if let backup, let item = SettingsBackup.list().first(where: { $0.id == backup }) {
+            alert.messageText = "Tuno Destek ayarlarını bir yedeğe döndürmek istiyor"
+            alert.informativeText = "Ayarların \(item.date.formatted(date: .long, time: .shortened)) tarihindeki haline döner (\(item.reason)). "
+                + "Şu anki ayarların önce yedeklenir. Tuno kapanıp yeniden açılır."
+        } else if backup != nil {
+            ack(id, "failed", "Yedek bulunamadı")
+            return
+        } else {
+            alert.messageText = "Tuno Destek ayarlarını sıfırlamak istiyor"
+            alert.informativeText = "Tuno'nun tüm ayarları varsayılana döner. Şu anki ayarların önce yedeklenir; istersen sonra geri dönebilirsin. "
+                + "Pano geçmişin silinmez. Tuno kapanıp yeniden açılır."
+        }
+        alert.addButton(withTitle: "Onayla")
+        alert.addButton(withTitle: "Vazgeç")
+        alert.icon = NSApp.applicationIconImage
+        NSApp.activate()
+        guard alert.runModal() == .alertFirstButtonReturn else { ack(id, "declined"); return }
+        guard isActive, let token else { return }
+        ack(id, "done", "Tuno yeniden açılıyor")
+        let pending = acks
+        acks = []
+        _ = try? await Self.post(["action": "sync", "token": token, "acks": pending], timeout: 5)
+        _ = try? await Self.post(["action": "end", "token": token, "reason": "update"], timeout: 5)
+        self.token = nil
+        loop?.cancel()
+        SupportLog.log("destek", backup == nil ? "Ayarlar sıfırlandı" : "Ayarlar yedeğe döndürüldü: \(backup!)")
+        do {
+            if let backup { try SettingsBackup.restoreAndRelaunch(backup) } else { try SettingsBackup.resetAndRelaunch() }
+        } catch {
+            finish(notice: "Ayarlar değiştirilemedi.")
+        }
+    }
+
+    private static func showMessage(_ text: String) {
+        let alert = NSAlert()
+        alert.messageText = "Tuno Destek'ten mesaj"
+        alert.informativeText = text
+        alert.icon = NSApp.applicationIconImage
+        NSApp.activate()
+        alert.runModal()
     }
 
     private func switchVersion(id: Int, payload: [String: Any]) async {

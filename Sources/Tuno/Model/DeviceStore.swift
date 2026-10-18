@@ -62,11 +62,18 @@ final class DeviceStore {
         systemOutputID = AudioObjectID.system.read(
             .init(kAudioHardwarePropertyDefaultSystemOutputDevice), initial: AudioObjectID.unknown) ?? .unknown
 
+        SupportLog.log("ses", "Aygıtlar: çıkış \(outputDevices.map(\.name)), giriş \(inputDevices.map(\.name))", verbose: true)
         if newOutput != defaultOutputID || outputListeners.isEmpty {
+            if newOutput != defaultOutputID {
+                SupportLog.log("ses", "Varsayılan çıkış: \(outputDevices.first { $0.id == newOutput }?.name ?? "yok")")
+            }
             defaultOutputID = newOutput
             outputListeners = observe(newOutput, scope: .output)
         }
         if newInput != defaultInputID || inputListeners.isEmpty {
+            if newInput != defaultInputID {
+                SupportLog.log("ses", "Varsayılan giriş: \(inputDevices.first { $0.id == newInput }?.name ?? "yok")")
+            }
             defaultInputID = newInput
             inputListeners = observe(newInput, scope: .input)
         }

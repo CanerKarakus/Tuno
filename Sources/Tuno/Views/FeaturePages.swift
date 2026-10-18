@@ -173,7 +173,6 @@ struct WindowsView: View {
     @Environment(WindowSnapper.self) private var snapper
     @Environment(CloseButtonQuitter.self) private var closeQuitter
     @AppStorage(WindowSwitcher.showThumbnailsKey) private var thumbnails = true
-    @State private var switcherEnabled = true
 
     /// Pencere özellikleri Ekran Kaydı ve Erişilebilirlik izni olmadan hiç çalışmaz.
     private var available: Bool {
@@ -218,8 +217,8 @@ struct WindowsView: View {
             }
 
             Section {
-                Toggle(isOn: Binding(get: { switcherEnabled },
-                                     set: { switcherEnabled = $0; shortcuts.setEnabled($0, for: .switchWindows) })) {
+                Toggle(isOn: Binding(get: { shortcuts.isEnabled(.switchWindows) },
+                                     set: { shortcuts.setEnabled($0, for: .switchWindows) })) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Pencereler arasında geçiş (Alt-Tab)")
                         Text("⌘ basılıyken ⇥ ile pencereler arasında gezinin, ⌘'yi bırakınca seçilen pencere öne gelir. ⇧ geri, Esc iptal. Yazmaya başlayınca pencereler süzülür, ↩ ile seçilir.")
@@ -227,7 +226,7 @@ struct WindowsView: View {
                     }
                 }
                 Toggle("Pencere önizlemelerini göster", isOn: $thumbnails)
-                    .disabled(!switcherEnabled)
+                    .disabled(!shortcuts.isEnabled(.switchWindows))
             } header: {
                 Text("Alt-Tab")
             }
@@ -283,10 +282,7 @@ struct WindowsView: View {
             .disabled(permissions.status(.accessibility) != .granted)
         }
         .formStyle(.grouped)
-        .onAppear {
-            switcherEnabled = shortcuts.isEnabled(.switchWindows)
-            permissions.refresh()
-        }
+        .onAppear { permissions.refresh() }
     }
 }
 
@@ -295,7 +291,6 @@ struct WindowsView: View {
 struct ClipboardSettingsView: View {
     @Environment(ClipboardHistory.self) private var clipboard
     @Environment(ShortcutCenter.self) private var shortcuts
-    @State private var shortcutEnabled = true
     @State private var confirmClear = false
 
     var body: some View {
@@ -309,8 +304,8 @@ struct ClipboardSettingsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                Toggle(isOn: Binding(get: { shortcutEnabled },
-                                     set: { shortcutEnabled = $0; shortcuts.setEnabled($0, for: .clipboardHistory) })) {
+                Toggle(isOn: Binding(get: { shortcuts.isEnabled(.clipboardHistory) },
+                                     set: { shortcuts.setEnabled($0, for: .clipboardHistory) })) {
                     HStack {
                         Text("⌘⇧V ile göster")
                         Spacer()
@@ -335,7 +330,6 @@ struct ClipboardSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .onAppear { shortcutEnabled = shortcuts.isEnabled(.clipboardHistory) }
         .confirmationDialog("Pano geçmişi silinsin mi?", isPresented: $confirmClear) {
             Button("Sil", role: .destructive) { clipboard.clear() }
         }

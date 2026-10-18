@@ -159,12 +159,17 @@ final class ShortcutCenter {
 
     // MARK: - Global kısayollar
 
+    /// Açık/kapalı değişince artar; sayfalar (ve destek panelinden gelen değişiklikler) anında yansısın.
+    private(set) var revision = 0
+
     func isEnabled(_ shortcut: Shortcut) -> Bool {
-        UserDefaults.standard.bool(forKey: shortcut.defaultsKey, default: true)
+        _ = revision
+        return UserDefaults.standard.bool(forKey: shortcut.defaultsKey, default: true)
     }
 
     func setEnabled(_ enabled: Bool, for shortcut: Shortcut) {
         UserDefaults.standard.set(enabled, forKey: shortcut.defaultsKey)
+        revision += 1
         register(shortcut, enabled: enabled)
         if shortcut == .switchWindows { register(.switchWindowsBackward, enabled: enabled) }
     }

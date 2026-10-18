@@ -123,6 +123,7 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
     }
 
     func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        SupportLog.log("güncelleme", "Yeni sürüm bulundu: \(item.displayVersionString)\(item.isCriticalUpdate ? " (kritik)" : "")")
         if item.isCriticalUpdate {
             UserDefaults.standard.set(item.displayVersionString, forKey: pendingKey)
         }

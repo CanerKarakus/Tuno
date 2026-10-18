@@ -264,6 +264,8 @@ final class Mixer {
         reconcileAppTaps(&errors)
         reconcileRemainder(&errors)
         applyDSP()
+        if errors.first != lastError, let error = errors.first { SupportLog.log("ses", "Hata: \(error)") }
+        SupportLog.log("ses", "Uygulama sesleri: \(apps.count) uygulama, \(errors.count) hata", verbose: true)
         lastError = errors.first
     }
 

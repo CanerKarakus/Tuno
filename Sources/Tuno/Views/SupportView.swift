@@ -68,9 +68,27 @@ struct SupportView: View {
             } header: {
                 Text("Destek Modu")
             } footer: {
-                Text("Destek modunu yalnızca Tuno Destek'in verdiği kodla açabilirsin. Açıkken destek ekibi 30 dakika boyunca Tuno'nun sürümünü değiştirmeyi önerebilir; her değişiklik önce sana sorulur. Sonlandırdığında ya da Tuno kapandığında bağlantı hemen kesilir.")
+                Text("Destek modunu yalnızca Tuno Destek'in verdiği kodla açabilirsin. Açıkken destek ekibi 30 dakika boyunca Tuno'nun ayarlarını görüp değiştirebilir. Sürüm değiştirme, tanılama paketi ve ayarları sıfırlama gibi işlemler önce sana sorulur. Sonlandırdığında ya da Tuno kapandığında bağlantı hemen kesilir.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            if !support.activity.isEmpty {
+                Section("Bu Oturumda Yapılanlar") {
+                    ForEach(Array(support.activity.prefix(30).enumerated()), id: \.offset) { _, line in
+                        Text(line).font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if let until = support.verboseUntil, until > Date() {
+                Section("Günlük") {
+                    NoticeRow(symbol: "doc.text.magnifyingglass", color: .blue,
+                              text: "Tuno Destek ayrıntılı günlüğü açtı; \(until.formatted(date: .omitted, time: .shortened)) saatinde kendiliğinden kapanır. Günlük bu Mac'te kalır, yalnızca onayladığın tanılama paketiyle gönderilir.")
+                    LabeledContent("Ayrıntılı günlük") {
+                        Button("Şimdi Kapat") { support.stopVerbose() }
+                    }
+                }
             }
 
             if let pinned = support.pinnedVersion {
@@ -148,8 +166,8 @@ private struct SupportCodeSheet: View {
                 Text(error).font(.callout).foregroundStyle(.red).multilineTextAlignment(.center)
             }
             VStack(alignment: .leading, spacing: 8) {
-                Label("Destek ekibi 30 dakika boyunca bu Mac'teki Tuno'ya bağlanır.", systemImage: "clock")
-                Label("Sürüm değişikliği gibi her işlem önce sana sorulur.", systemImage: "hand.raised")
+                Label("Destek ekibi 30 dakika boyunca Tuno'nun ayarlarını görüp değiştirebilir.", systemImage: "slider.horizontal.3")
+                Label("Sürüm değiştirme, tanılama ve sıfırlama önce sana sorulur.", systemImage: "hand.raised")
                 Label("Destek sayfasından ya da menü çubuğundan istediğin an sonlandırabilirsin.", systemImage: "xmark.circle")
             }
             .font(.callout)
