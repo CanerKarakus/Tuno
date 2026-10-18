@@ -43,15 +43,24 @@ enum WindowCatalog {
     /// Önden arkaya sıralı pencereler; ardından başka masaüstlerindekiler, en sonda küçültülmüşler.
     static func windows(for pid: pid_t? = nil) -> [WindowInfo] {
         let ownPID = getpid()
+        // Tuno da Dock'ta göründüğü sürece (ayarlar penceresi açıkken) listelenir; arka plandayken değil.
         let apps = NSWorkspace.shared.runningApplications.filter {
-            $0.activationPolicy == .regular && $0.processIdentifier != ownPID
-                && (pid == nil || $0.processIdentifier == pid)
+            $0.activationPolicy == .regular && (pid == nil || $0.processIdentifier == pid)
         }
         let appsByPID = Dictionary(apps.map { ($0.processIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
 
         // Erişilebilirlik: her uygulamanın standart pencereleri (başlık, küçültülme durumu).
         var axWindows: [CGWindowID: WindowInfo] = [:]
         for app in apps {
+            // Tuno'nun kendi pencereleri doğrudan AppKit'ten: kendine Erişilebilirlik sorgusu ana iş parçacığını bekletir.
+            if app.processIdentifier == ownPID {
+                for window in ownWindows() {
+                    axWindows[CGWindowID(window.windowNumber)] = WindowInfo(
+                        id: CGWindowID(window.windowNumber), pid: ownPID, appName: app.localizedName ?? "Tuno",
+                        title: window.title, isMinimized: window.isMiniaturized)
+                }
+                continue
+            }
             let element = AXUIElementCreateApplication(app.processIdentifier)
             AXUIElementSetMessagingTimeout(element, 0.25)
             for window in children(of: element, kAXWindowsAttribute) {
@@ -88,7 +97,7 @@ enum WindowCatalog {
         var elsewhere: [WindowInfo] = []
         for entry in normal where !isOnScreen(entry) {
             guard let id = entry[kCGWindowNumber as String] as? CGWindowID, axWindows[id] == nil, !seen.contains(id),
-                  let owner = entry[kCGWindowOwnerPID as String] as? pid_t, let app = appsByPID[owner],
+                  let owner = entry[kCGWindowOwnerPID as String] as? pid_t, owner != ownPID, let app = appsByPID[owner],
                   (entry[kCGWindowAlpha as String] as? Double ?? 1) > 0,
                   let bounds = (entry[kCGWindowBounds as String] as? NSDictionary)
                       .flatMap({ CGRect(dictionaryRepresentation: $0 as CFDictionary) }),
@@ -108,8 +117,26 @@ enum WindowCatalog {
         return ordered + elsewhere + rest
     }
 
+    /// Tuno'nun Alt-Tab'da gösterilecek pencereleri: başlıklı, normal düzeyde, görünür ya da küçültülmüş.
+    private static func ownWindows() -> [NSWindow] {
+        NSApp.windows.filter {
+            $0.styleMask.contains(.titled) && !($0 is NSPanel) && $0.level == .normal && ($0.isVisible || $0.isMiniaturized)
+        }
+    }
+
+    private static func ownWindow(_ info: WindowInfo) -> NSWindow? {
+        guard info.pid == getpid() else { return nil }
+        return ownWindows().first { CGWindowID($0.windowNumber) == info.id }
+    }
+
     /// Pencereyi (gerekirse küçültülmüşten çıkararak) öne getirir ve uygulamasını etkinleştirir.
     static func focus(_ info: WindowInfo) {
+        if let window = ownWindow(info) {
+            if window.isMiniaturized { window.deminiaturize(nil) }
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
         let found = raise(info)
         let app = AXUIElementCreateApplication(info.pid)
         AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
@@ -123,6 +150,7 @@ enum WindowCatalog {
 
     /// Pencereyi kapat düğmesine basarak kapatır (kaydedilmemiş belgede uygulama kendisi sorar).
     static func close(_ info: WindowInfo) {
+        if let own = ownWindow(info) { own.performClose(nil); return }
         guard let window = element(for: info) else { return }
         var button: CFTypeRef?
         if AXUIElementCopyAttributeValue(window, kAXCloseButtonAttribute as CFString, &button) == .success,
@@ -133,6 +161,7 @@ enum WindowCatalog {
     }
 
     static func minimize(_ info: WindowInfo) {
+        if let own = ownWindow(info) { own.miniaturize(nil); return }
         guard let window = element(for: info) else { return }
         AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
     }

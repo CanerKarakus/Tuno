@@ -266,8 +266,14 @@ final class StatusBarController: NSObject {
         updateVisibility()
     }
 
+    /// En son uygulanan görünürlük. macOS simgeyi gösterirken (görünür olmadan önce) ayar değişikliği bildirimi
+    /// yayınlar; bu kayıt olmadan içeri yeniden giren çağrı simgeyi tekrar tekrar göstermeye çalışıp Tuno'yu çökertiyordu.
+    private var appliedVisibility: Bool?
+
     private func updateVisibility() {
         let visible = UserDefaults.standard.bool(forKey: PreferenceKey.showMenuBar, default: true)
+        guard visible != appliedVisibility else { return }
+        appliedVisibility = visible
         if statusItem.isVisible != visible { statusItem.isVisible = visible }
         if !visible { close() }
     }
