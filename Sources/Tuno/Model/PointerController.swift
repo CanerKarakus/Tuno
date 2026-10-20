@@ -21,15 +21,15 @@ enum ButtonAction: String, CaseIterable, Codable, Identifiable {
 
     var title: String {
         switch self {
-        case .system: "Varsayılan"
-        case .back: "Geri"
-        case .forward: "İleri"
-        case .missionControl: "Mission Control"
-        case .appWindows: "Uygulama pencereleri"
-        case .showDesktop: "Masaüstünü göster"
-        case .previousSpace: "Önceki masaüstü"
-        case .nextSpace: "Sonraki masaüstü"
-        case .middleClick: "Orta tık"
+        case .system: L("Varsayılan")
+        case .back: L("Geri")
+        case .forward: Lc("İleri", "fare")
+        case .missionControl: L("Mission Control")
+        case .appWindows: L("Uygulama pencereleri")
+        case .showDesktop: L("Masaüstünü göster")
+        case .previousSpace: L("Önceki masaüstü")
+        case .nextSpace: L("Sonraki masaüstü")
+        case .middleClick: L("Orta tık")
         }
     }
 
@@ -64,9 +64,9 @@ enum MouseButton: Int64, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .middle: "Orta tuş (tekerlek)"
-        case .back: "Yan tuş 4 (geri)"
-        case .forward: "Yan tuş 5 (ileri)"
+        case .middle: L("Orta tuş (tekerlek)")
+        case .back: L("Yan tuş 4 (geri)")
+        case .forward: L("Yan tuş 5 (ileri)")
         }
     }
 }
@@ -137,7 +137,7 @@ final class PointerController {
                 MainActor.assumeIsolated {
                     VolumeHUD.shared.show(
                         symbol: direction == .back ? "chevron.backward.circle.fill" : "chevron.forward.circle.fill",
-                        title: direction == .back ? "Geri" : "İleri")
+                        title: direction == .back ? L("Geri") : Lc("İleri", "fare"))
                 }
             }
         }

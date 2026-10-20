@@ -48,16 +48,16 @@ enum VersionSwitcher {
 
         var errorDescription: String? {
             switch self {
-            case .invalid: "Sürüm bilgisi geçersiz."
-            case .tooOld: "\(VersionSwitcher.minimum) sürümünden eskiye geçilemez."
-            case .same: "Bu sürüm zaten kurulu."
-            case .notConfigured: "Bu Tuno kopyası sürüm değiştirmeyi desteklemiyor (geliştirme sürümü)."
-            case .location: "Tuno'nun bulunduğu klasöre yazılamıyor. Tuno'yu Uygulamalar klasörüne taşıyıp yeniden dene."
-            case .download: "Sürüm indirilemedi."
-            case .size, .signature: "İndirilen dosya doğrulanamadı; kurulmadı."
-            case .mount: "Disk görüntüsü açılamadı."
-            case .missingApp, .wrongApp: "Disk görüntüsünde beklenen Tuno sürümü yok."
-            case .codeSignature: "Uygulamanın Apple imzası doğrulanamadı; kurulmadı."
+            case .invalid: L("Sürüm bilgisi geçersiz.")
+            case .tooOld: String(format: L("%@ sürümünden eskiye geçilemez."), VersionSwitcher.minimum)
+            case .same: L("Bu sürüm zaten kurulu.")
+            case .notConfigured: L("Bu Tuno kopyası sürüm değiştirmeyi desteklemiyor (geliştirme sürümü).")
+            case .location: L("Tuno'nun bulunduğu klasöre yazılamıyor. Tuno'yu Uygulamalar klasörüne taşıyıp yeniden dene.")
+            case .download: L("Sürüm indirilemedi.")
+            case .size, .signature: L("İndirilen dosya doğrulanamadı; kurulmadı.")
+            case .mount: L("Disk görüntüsü açılamadı.")
+            case .missingApp, .wrongApp: L("Disk görüntüsünde beklenen Tuno sürümü yok.")
+            case .codeSignature: L("Uygulamanın Apple imzası doğrulanamadı; kurulmadı.")
             }
         }
     }
@@ -65,12 +65,12 @@ enum VersionSwitcher {
     @MainActor
     static func confirm(_ target: Target) -> Bool {
         let alert = NSAlert()
-        alert.messageText = "Tuno Destek, Tuno'yu \(target.version) sürümüne geçirmek istiyor"
-        alert.informativeText = "Şu an \(UpdateDelegate.currentVersion) kullanıyorsun. Onaylarsan Tuno \(target.version) indirilip doğrulanır, "
-            + "ardından Tuno kapanıp yeni sürümle yeniden açılır. Ayarların korunur."
-            + (target.pin ? "\n\nBu sürümde kalırsın; Destek sayfasından istediğin zaman normal güncellemelere dönebilirsin." : "")
-        alert.addButton(withTitle: "Onayla")
-        alert.addButton(withTitle: "Vazgeç")
+        alert.messageText = String(format: L("Tuno Destek, Tuno'yu %@ sürümüne geçirmek istiyor"), target.version)
+        alert.informativeText = String(format: L("Şu an %@ kullanıyorsun. Onaylarsan Tuno %@ indirilip doğrulanır, "), UpdateDelegate.currentVersion, target.version)
+            + L("ardından Tuno kapanıp yeni sürümle yeniden açılır. Ayarların korunur.")
+            + (target.pin ? L("\n\nBu sürümde kalırsın; Destek sayfasından istediğin zaman normal güncellemelere dönebilirsin.") : "")
+        alert.addButton(withTitle: L("Onayla"))
+        alert.addButton(withTitle: L("Vazgeç"))
         alert.icon = NSApp.applicationIconImage
         NSApp.activate()
         return alert.runModal() == .alertFirstButtonReturn
@@ -156,6 +156,10 @@ enum VersionSwitcher {
         if /bin/mv "$2" "$4"; then
           if /bin/mv "$3" "$2"; then /bin/rm -rf "$4"; else /bin/mv "$4" "$2"; fi
         fi
+        # Bu arada eski kopya yeniden açıldıysa (ör. giriş öğesi) kapatılır; yoksa open yalnızca onu öne getirir.
+        # (Taşınmadan önce başlamış süreç hâlâ eski yolla görünür; yeni sürüm henüz açılmadığı için yalnızca o eşleşir.)
+        /usr/bin/pkill -f "^$2/Contents/MacOS/" 2>/dev/null
+        for i in 1 2 3 4 5 6 7 8 9 10; do /usr/bin/pgrep -f "^$2/Contents/MacOS/" >/dev/null || break; /bin/sleep 0.3; done
         /usr/bin/open "$2"
         /bin/rm -rf "$5"
         """

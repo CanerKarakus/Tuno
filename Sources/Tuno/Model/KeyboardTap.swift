@@ -108,7 +108,7 @@ final class FinderCutPaste {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
                 MainActor.assumeIsolated { self?.cutChangeCount = NSPasteboard.general.changeCount }
             }
-            VolumeHUD.shared.show(symbol: "scissors", title: "Kesildi")
+            VolumeHUD.shared.show(symbol: "scissors", title: L("Kesildi"))
             return true
         }
         guard let cut = cutChangeCount, NSPasteboard.general.changeCount == cut else { return false }

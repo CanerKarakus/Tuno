@@ -13,9 +13,9 @@ final class CrashReporter {
         var id: Self { self }
         var title: String {
             switch self {
-            case .ask: "Göndermeden önce sor"
-            case .always: "Otomatik gönder"
-            case .never: "Gönderme"
+            case .ask: L("Göndermeden önce sor")
+            case .always: L("Otomatik gönder")
+            case .never: L("Gönderme")
             }
         }
     }
@@ -58,14 +58,13 @@ final class CrashReporter {
 
     private func ask(count: Int) -> Bool {
         let alert = NSAlert()
-        alert.messageText = "Tuno beklenmedik şekilde kapandı"
-        alert.informativeText = (count > 1 ? "\(count) çökme raporu bulundu. " : "")
-            + "Raporu göndererek sorunun düzeltilmesine yardımcı olabilirsin. Rapor yalnızca Tuno ve macOS sürümünü, "
-            + "Mac modelini ve hatanın teknik ayrıntılarını içerir; kişisel dosyaların ya da adın gönderilmez."
-        alert.addButton(withTitle: "Gönder")
-        alert.addButton(withTitle: "Gönderme")
+        alert.messageText = L("Tuno beklenmedik şekilde kapandı")
+        alert.informativeText = (count > 1 ? String(format: L("%d çökme raporu bulundu. "), count) : "")
+            + L("Raporu göndererek sorunun düzeltilmesine yardımcı olabilirsin. Rapor yalnızca Tuno ve macOS sürümünü, Mac modelini ve hatanın teknik ayrıntılarını içerir; kişisel dosyaların ya da adın gönderilmez.")
+        alert.addButton(withTitle: L("Gönder"))
+        alert.addButton(withTitle: L("Gönderme"))
         alert.showsSuppressionButton = true
-        alert.suppressionButton?.title = "Bu seçimi hatırla"
+        alert.suppressionButton?.title = L("Bu seçimi hatırla")
         NSApp.activate()
         let send = alert.runModal() == .alertFirstButtonReturn
         if alert.suppressionButton?.state == .on {

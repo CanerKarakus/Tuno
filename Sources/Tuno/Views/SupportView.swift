@@ -9,23 +9,24 @@ struct SupportView: View {
 
     var body: some View {
         Form {
+            Section { PageHeader(page: .support) }
             Section {
                 LabeledContent {
                     HStack(spacing: 10) {
                         Text(supportID)
                             .font(.system(.body, design: .monospaced).weight(.medium))
                             .textSelection(.enabled)
-                        Button(copied ? "Kopyalandı" : "Kopyala", action: copy)
+                        Button(copied ? L("Kopyalandı") : L("Kopyala"), action: copy)
                     }
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Tuno Kullanıcı ID'si")
-                        Text("Destek ekibi sorduğunda bu numarayı ilet.")
+                        Text(L("Tuno Kullanıcı ID'si"))
+                        Text(L("Destek ekibi sorduğunda bu numarayı ilet."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
             } footer: {
-                Text("Bu numara yalnızca bu Mac'teki Tuno kurulumunu tanımlar; adını, e-postanı ya da Mac'inin seri numarasını içermez. Güncellemelerde değişmez.")
+                Text(L("Bu numara yalnızca bu kurulumu tanımlar; kişisel bilgi içermez."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -34,14 +35,14 @@ struct SupportView: View {
                 if support.isActive {
                     TimelineView(.periodic(from: .now, by: 1)) { _ in
                         LabeledContent {
-                            Button("Oturumu Sonlandır", role: .destructive) { support.end() }
+                            Button(L("Oturumu Sonlandır"), role: .destructive) { support.end() }
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
                                     Circle().fill(.green).frame(width: 7, height: 7)
-                                    Text("Destek modu açık")
+                                    Text(L("Destek modu açık"))
                                 }
-                                Text("Kalan süre \(Self.clock(support.remaining))")
+                                Text(String(format: L("Kalan süre %@"), Self.clock(support.remaining)))
                                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                             }
                         }
@@ -54,11 +55,11 @@ struct SupportView: View {
                     }
                 } else {
                     LabeledContent {
-                        Button("Destek Modunu Aç…") { showCode = true }
+                        Button(L("Destek Modunu Aç…")) { showCode = true }
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Destek modu")
-                            Text("Kapalı").font(.caption).foregroundStyle(.secondary)
+                            Text(L("Destek modu"))
+                            Text(L("Kapalı")).font(.caption).foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -66,15 +67,15 @@ struct SupportView: View {
                     NoticeRow(symbol: "info.circle.fill", color: .secondary, text: notice)
                 }
             } header: {
-                Text("Destek Modu")
+                Text(L("Destek Modu"))
             } footer: {
-                Text("Destek modunu yalnızca Tuno Destek'in verdiği kodla açabilirsin. Açıkken destek ekibi 30 dakika boyunca Tuno'nun ayarlarını görüp değiştirebilir. Sürüm değiştirme, tanılama paketi ve ayarları sıfırlama gibi işlemler önce sana sorulur. Sonlandırdığında ya da Tuno kapandığında bağlantı hemen kesilir.")
+                Text(L("Destek modu yalnızca Tuno Destek'in verdiği kodla açılır ve 30 dakika sürer. Önemli işlemler önce sana sorulur; sonlandırınca bağlantı kesilir."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             if !support.activity.isEmpty {
-                Section("Bu Oturumda Yapılanlar") {
+                Section(L("Bu Oturumda Yapılanlar")) {
                     ForEach(Array(support.activity.prefix(30).enumerated()), id: \.offset) { _, line in
                         Text(line).font(.callout).foregroundStyle(.secondary)
                     }
@@ -82,24 +83,25 @@ struct SupportView: View {
             }
 
             if let until = support.verboseUntil, until > Date() {
-                Section("Günlük") {
+                Section(L("Günlük")) {
                     NoticeRow(symbol: "doc.text.magnifyingglass", color: .blue,
-                              text: "Tuno Destek ayrıntılı günlüğü açtı; \(until.formatted(date: .omitted, time: .shortened)) saatinde kendiliğinden kapanır. Günlük bu Mac'te kalır, yalnızca onayladığın tanılama paketiyle gönderilir.")
-                    LabeledContent("Ayrıntılı günlük") {
-                        Button("Şimdi Kapat") { support.stopVerbose() }
+                              text: String(format: L("Tuno Destek ayrıntılı günlüğü açtı; %@ saatinde kendiliğinden kapanır. Günlük bu Mac'te kalır, yalnızca onayladığın tanılama paketiyle gönderilir."), until.formatted(date: .omitted, time: .shortened)))
+                    LabeledContent(L("Ayrıntılı günlük")) {
+                        Button(L("Şimdi Kapat")) { support.stopVerbose() }
                     }
                 }
             }
 
             if let pinned = support.pinnedVersion {
-                Section("Sürüm") {
+                Section(L("Sürüm")) {
                     NoticeRow(symbol: "pin.fill", color: .orange,
-                              text: "Tuno Destek bu Mac'i \(pinned) sürümünde tutuyor; otomatik güncellemeler bekletiliyor.")
-                    LabeledContent("Güncellemeler") {
-                        Button("Normal Güncellemelere Dön") { support.unpin() }
+                              text: String(format: L("Tuno Destek bu Mac'i %@ sürümünde tutuyor; otomatik güncellemeler bekletiliyor."), pinned))
+                    LabeledContent(L("Güncellemeler")) {
+                        Button(L("Normal Güncellemelere Dön")) { support.unpin() }
                     }
                 }
             }
+            PageFooter()
         }
         .formStyle(.grouped)
         .sheet(isPresented: $showCode) { SupportCodeSheet() }
@@ -132,8 +134,8 @@ private struct SupportCodeSheet: View {
         VStack(spacing: 18) {
             SettingsIcon(symbol: Page.support.symbol, color: Page.support.tint, size: 52)
             VStack(spacing: 6) {
-                Text("Destek Modunu Aç").font(.title3.weight(.semibold))
-                Text("Tuno Destek'in sana verdiği 6 haneli kodu yaz.")
+                Text(L("Destek Modunu Aç")).font(.title3.weight(.semibold))
+                Text(L("Tuno Destek'in sana verdiği 6 haneli kodu yaz."))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -166,19 +168,19 @@ private struct SupportCodeSheet: View {
                 Text(error).font(.callout).foregroundStyle(.red).multilineTextAlignment(.center)
             }
             VStack(alignment: .leading, spacing: 8) {
-                Label("Destek ekibi 30 dakika boyunca Tuno'nun ayarlarını görüp değiştirebilir.", systemImage: "slider.horizontal.3")
-                Label("Sürüm değiştirme, tanılama ve sıfırlama önce sana sorulur.", systemImage: "hand.raised")
-                Label("Destek sayfasından ya da menü çubuğundan istediğin an sonlandırabilirsin.", systemImage: "xmark.circle")
+                Label(L("Destek ekibi 30 dakika boyunca Tuno'nun ayarlarını görüp değiştirebilir."), systemImage: "slider.horizontal.3")
+                Label(L("Sürüm değiştirme, tanılama ve sıfırlama önce sana sorulur."), systemImage: "hand.raised")
+                Label(L("Destek sayfasından ya da menü çubuğundan istediğin an sonlandırabilirsin."), systemImage: "xmark.circle")
             }
             .font(.callout)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack {
-                Button("Vazgeç") { dismiss() }
+                Button(L("Vazgeç")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 if working { ProgressView().controlSize(.small) }
-                Button("Onayla", action: confirm)
+                Button(L("Onayla"), action: confirm)
                     .keyboardShortcut(.defaultAction)
                     .disabled(code.count != 6 || working)
             }

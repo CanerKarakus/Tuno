@@ -18,6 +18,8 @@ struct TunoApp: App {
                 .environment(appDelegate.dockPreviews)
                 .environment(appDelegate.permissions)
                 .environment(appDelegate.onboarding)
+                .environment(LanguageStore.shared)
+                .environment(ThemeStore.shared)
                 .environment(appDelegate.updater)
                 .environment(appDelegate.snapper)
                 .environment(appDelegate.keepAwake)
@@ -25,18 +27,19 @@ struct TunoApp: App {
                 .environment(appDelegate.closeQuitter)
                 .environment(appDelegate.keyboardIndicator)
                 .environment(appDelegate.support)
-                .frame(minWidth: 820, minHeight: 520)
         }
-        .defaultSize(width: 880, height: 600)
+        .defaultSize(width: 1000, height: 680)
         .windowToolbarStyle(.unified)
         // İzinler eksikse ya da tanıtım görülmediyse açılışta yalnızca karşılama penceresi görünür.
         .defaultLaunchBehavior(OnboardingModel.launchPhase == nil ? .presented : .suppressed)
         .restorationBehavior(.disabled)
 
-        Window("Tuno'ya Hoş Geldiniz", id: "onboarding") {
+        Window(L("Tuno'ya Hoş Geldiniz"), id: "onboarding") {
             OnboardingRoot()
                 .environment(appDelegate.onboarding)
                 .environment(appDelegate.permissions)
+                .environment(LanguageStore.shared)
+                .environment(ThemeStore.shared)
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -72,8 +75,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowSwitcher: WindowSwitcher?
     private var microphoneIndicator: NSStatusItem?
     private var supportIndicator: NSStatusItem?
+    private var choiceCheck: DispatchWorkItem?
+
+    /// Görünüm pencereler açılmadan uygulanır (ilk karede yanlış renk görünmesin).
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        AppTheme.current.apply()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        DebugRender.runIfRequested(self)
+        #endif
+        // Dil ya da görünüm seçilince yönetim paneli bunu görsün: birkaç saniye sonra güncelleme denetimi
+        // (seçimler denetimle gider; art arda değişiklikler tek denetimde birleşir).
+        NotificationCenter.default.addObserver(forName: .tunoAppearanceChoiceChanged, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.choiceCheck?.cancel()
+                let work = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.updater.checkInBackground() } }
+                self?.choiceCheck = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: work)
+            }
+        }
         SupportLog.log("tuno", "Açıldı: Tuno \(updater.version) · macOS \(SystemInfo.osVersion) · \(SystemInfo.model)")
         support.app = self
         SettingsBackup.daily()
@@ -83,14 +105,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         observeWindowClosing()
         _ = shortcuts
         statusBar = StatusBarController {
-            PanelRoot()
-                .environment(self.devices)
-                .environment(self.mixer)
-                .environment(self.mixer.equalizer)
-                .environment(self.clipboard)
-                .environment(self.displays)
-                .environment(self.keepAwake)
-                .environment(self.battery)
+            LanguageRefresh {
+                PanelRoot()
+                    .environment(self.devices)
+                    .environment(self.mixer)
+                    .environment(self.mixer.equalizer)
+                    .environment(self.clipboard)
+                    .environment(self.displays)
+                    .environment(self.keepAwake)
+                    .environment(self.battery)
+            }
+            .environment(LanguageStore.shared)
         }
         shortcuts.onClipboard = { [weak self] in
             guard let self, self.clipboard.isEnabled else { return }
@@ -123,13 +148,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             self.keepAwake.toggle()
             VolumeHUD.shared.show(symbol: self.keepAwake.isActive ? "cup.and.heat.waves.fill" : "cup.and.saucer",
-                                  title: self.keepAwake.isActive ? "Uyanık tutuluyor" : "Uyku engelleme kapalı")
+                                  title: self.keepAwake.isActive ? L("Uyanık tutuluyor") : L("Uyku engelleme kapalı"))
         }
         support.onActiveChange = { [weak self] active in self?.updateSupportIndicator(active) }
         devices.onMicrophoneMuteChange = { [weak self] muted in
             self?.updateMicrophoneIndicator(muted)
             VolumeHUD.shared.show(symbol: muted ? "mic.slash.fill" : "mic.fill",
-                                  title: muted ? "Mikrofon kapalı" : "Mikrofon açık")
+                                  title: muted ? L("Mikrofon kapalı") : L("Mikrofon açık"))
         }
     }
 
@@ -179,10 +204,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard microphoneIndicator == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        let image = NSImage(systemSymbolName: "mic.slash.fill", accessibilityDescription: "Mikrofon kapalı")?
+        let image = NSImage(systemSymbolName: "mic.slash.fill", accessibilityDescription: L("Mikrofon kapalı"))?
             .withSymbolConfiguration(.init(paletteColors: [.systemRed]))
         item.button?.image = image
-        item.button?.toolTip = "Mikrofon kapalı. Açmak için tıklayın."
+        item.button?.toolTip = L("Mikrofon kapalı. Açmak için tıklayın.")
         item.button?.target = self
         item.button?.action = #selector(unmuteMicrophone)
         microphoneIndicator = item
@@ -201,15 +226,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         guard supportIndicator == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "lifepreserver.fill", accessibilityDescription: "Destek modu açık")?
+        item.button?.image = NSImage(systemSymbolName: "lifepreserver.fill", accessibilityDescription: L("Destek modu açık"))?
             .withSymbolConfiguration(.init(paletteColors: [.systemRed]))
-        item.button?.toolTip = "Destek modu açık"
+        item.button?.toolTip = L("Destek modu açık")
         let menu = NSMenu()
-        let title = NSMenuItem(title: "Destek modu açık", action: nil, keyEquivalent: "")
+        let title = NSMenuItem(title: L("Destek modu açık"), action: nil, keyEquivalent: "")
         title.isEnabled = false
         menu.addItem(title)
         menu.addItem(.separator())
-        let end = NSMenuItem(title: "Oturumu Sonlandır", action: #selector(endSupportSession), keyEquivalent: "")
+        let end = NSMenuItem(title: L("Oturumu Sonlandır"), action: #selector(endSupportSession), keyEquivalent: "")
         end.target = self
         menu.addItem(end)
         item.menu = menu

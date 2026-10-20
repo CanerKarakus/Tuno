@@ -316,7 +316,7 @@ final class Mixer {
         guard own.isValid else {
             // Kendi çıkışımızı hariç tutamazsak geri besleme riski var; başlatma.
             remainder?.invalidate(); remainder = nil
-            errors.append("Sistem geneli ses işleme başlatılamadı (Tuno süreci bulunamadı).")
+            errors.append(L("Sistem geneli ses işleme başlatılamadı (Tuno süreci bulunamadı)."))
             return
         }
         let excluded = [own] + taps.values.flatMap { tap -> [AudioObjectID] in
@@ -333,15 +333,15 @@ final class Mixer {
             remainder = try AudioTap(
                 name: "Sistem", source: .device(excluding: excluded), outputUID: uid, gain: deviceGain(uid))
         } catch {
-            errors.append(Self.message(for: error, subject: "Sistem sesi"))
+            errors.append(Self.message(for: error, subject: L("Sistem sesi")))
         }
     }
 
     private static func message(for error: Error, subject: String) -> String {
         if let error = error as? CoreAudioError {
             return error.isPermissionDenied
-                ? "Tuno'nun uygulama seslerine erişim izni yok. Sistem Ayarları › Gizlilik ve Güvenlik › Ses Kaydı bölümünden izin verin."
-                : "\(subject): \(error.description)"
+                ? L("Tuno'nun uygulama seslerine erişim izni yok. Sistem Ayarları › Gizlilik ve Güvenlik › Ses Kaydı bölümünden izin verin.")
+                : String(format: "%@: %@", subject, error.description)
         }
         return error.localizedDescription
     }

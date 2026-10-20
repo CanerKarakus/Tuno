@@ -58,7 +58,7 @@ final class AudioTap {
         self.description = description
 
         var status = AudioHardwareCreateProcessTap(description, &tapID)
-        guard status == noErr else { throw CoreAudioError(status: status, context: "Tap oluşturulamadı") }
+        guard status == noErr else { throw CoreAudioError(status: status, context: L("Tap oluşturulamadı")) }
 
         let aggregate: [String: Any] = [
             kAudioAggregateDeviceNameKey: "Tuno – \(name)",
@@ -74,7 +74,7 @@ final class AudioTap {
             ]],
         ]
         status = AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID)
-        guard status == noErr else { throw CoreAudioError(status: status, context: "Birleşik aygıt oluşturulamadı") }
+        guard status == noErr else { throw CoreAudioError(status: status, context: L("Birleşik aygıt oluşturulamadı")) }
 
         sampleRate = aggregateID.read(.init(kAudioDevicePropertyNominalSampleRate), initial: Float64(0))
             .flatMap { $0 > 0 ? $0 : nil } ?? 48_000
@@ -83,10 +83,10 @@ final class AudioTap {
         status = AudioDeviceCreateIOProcIDWithBlock(&ioProcID, aggregateID, queue) { _, input, _, output, _ in
             dsp.render(input: input, output: output)
         }
-        guard status == noErr else { throw CoreAudioError(status: status, context: "IOProc oluşturulamadı") }
+        guard status == noErr else { throw CoreAudioError(status: status, context: L("IOProc oluşturulamadı")) }
 
         status = AudioDeviceStart(aggregateID, ioProcID)
-        guard status == noErr else { throw CoreAudioError(status: status, context: "Ses akışı başlatılamadı") }
+        guard status == noErr else { throw CoreAudioError(status: status, context: L("Ses akışı başlatılamadı")) }
     }
 
     /// Tap'i yıkmadan süreç listesini (dahil edilen ya da hariç tutulan) günceller.

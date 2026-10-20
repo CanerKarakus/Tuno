@@ -15,21 +15,21 @@ extension EQPreset {
         EQPreset(id: id, name: name, gains: gains, isBuiltIn: true)
     }
 
-    static let builtIn: [EQPreset] = [
-        builtIn(flatID, "Düz", [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        builtIn("bass", "Bas Güçlendirici", [6, 5, 4, 2.5, 1, 0, 0, 0, 0, 0]),
-        builtIn("bassCut", "Bas Azaltıcı", [-6, -5, -4, -2.5, -1, 0, 0, 0, 0, 0]),
-        builtIn("treble", "Tiz Güçlendirici", [0, 0, 0, 0, 0, 1, 2.5, 4, 5, 6]),
-        builtIn("vocal", "Vokal", [-2, -2, -1, 0, 2, 4, 4, 3, 1, 0]),
-        builtIn("speech", "Konuşma ve Podcast", [-6, -4, -2, 0, 2, 4, 4, 3, 1, -1]),
-        builtIn("acoustic", "Akustik", [4, 4, 3, 1, 1.5, 1.5, 3, 3.5, 3, 2]),
-        builtIn("electronic", "Elektronik", [4.5, 4, 1, 0, -2, 2, 1, 1.5, 4, 5]),
-        builtIn("rock", "Rock", [5, 4, 3, 1.5, -0.5, -1, 0.5, 2.5, 3.5, 4.5]),
-        builtIn("classical", "Klasik", [4.5, 3.5, 3, 2.5, -1.5, -1.5, 0, 2, 3, 4]),
-        builtIn("loudness", "Yüksek Ses (Loudness)", [5, 4, 1, 0, -1, 0, 0, 1, 4, 5]),
-        builtIn("night", "Gece Modu", [-4, -3, -2, -1, 0, 1, 1, 0, -1, -2]),
-        builtIn("laptop", "Dizüstü Hoparlörü", [-3, -1, 2, 3, 2, 1, 0, 1, 2, 2]),
-    ]
+    static var builtIn: [EQPreset] { [
+        builtIn(flatID, L("Düz"), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        builtIn("bass", L("Bas Güçlendirici"), [6, 5, 4, 2.5, 1, 0, 0, 0, 0, 0]),
+        builtIn("bassCut", L("Bas Azaltıcı"), [-6, -5, -4, -2.5, -1, 0, 0, 0, 0, 0]),
+        builtIn("treble", L("Tiz Güçlendirici"), [0, 0, 0, 0, 0, 1, 2.5, 4, 5, 6]),
+        builtIn("vocal", L("Vokal"), [-2, -2, -1, 0, 2, 4, 4, 3, 1, 0]),
+        builtIn("speech", L("Konuşma ve Podcast"), [-6, -4, -2, 0, 2, 4, 4, 3, 1, -1]),
+        builtIn("acoustic", L("Akustik"), [4, 4, 3, 1, 1.5, 1.5, 3, 3.5, 3, 2]),
+        builtIn("electronic", L("Elektronik"), [4.5, 4, 1, 0, -2, 2, 1, 1.5, 4, 5]),
+        builtIn("rock", L("Rock"), [5, 4, 3, 1.5, -0.5, -1, 0.5, 2.5, 3.5, 4.5]),
+        builtIn("classical", Lc("Klasik", "eq"), [4.5, 3.5, 3, 2.5, -1.5, -1.5, 0, 2, 3, 4]),
+        builtIn("loudness", L("Yüksek Ses (Loudness)"), [5, 4, 1, 0, -1, 0, 0, 1, 4, 5]),
+        builtIn("night", L("Gece Modu"), [-4, -3, -2, -1, 0, 1, 1, 0, -1, -2]),
+        builtIn("laptop", L("Dizüstü Hoparlörü"), [-3, -1, 2, 3, 2, 1, 0, 1, 2, 2]),
+    ] }
 }
 
 /// Bir aygıta hangi EQ ayarının uygulanacağı.
@@ -83,7 +83,7 @@ final class Equalizer {
 
     func preset(id: String?) -> EQPreset? { allPresets.first { $0.id == id } }
 
-    var presetName: String { preset(id: presetID)?.name ?? "Özel" }
+    var presetName: String { preset(id: presetID)?.name ?? L("Özel") }
 
     // MARK: - Düzenleme
 

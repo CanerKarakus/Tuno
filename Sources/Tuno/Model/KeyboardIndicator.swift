@@ -32,7 +32,7 @@ final class KeyboardIndicator {
         guard on != capsLockOn else { return false }
         capsLockOn = on
         if isEnabled {
-            KeyboardHUD.shared.show(symbol: on ? "capslock.fill" : "capslock", title: on ? "Caps Lock Açık" : "Caps Lock Kapalı")
+            KeyboardHUD.shared.show(symbol: on ? "capslock.fill" : "capslock", title: on ? L("Caps Lock Açık") : L("Caps Lock Kapalı"))
         }
         return false
     }

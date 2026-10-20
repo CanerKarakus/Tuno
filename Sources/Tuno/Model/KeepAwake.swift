@@ -18,9 +18,9 @@ final class KeepAwake {
         isActive ? stop() : start(minutes: nil)
     }
 
-    static let durations: [(title: String, minutes: Int?)] = [
-        ("Süresiz", nil), ("30 dakika", 30), ("1 saat", 60), ("2 saat", 120), ("4 saat", 240),
-    ]
+    static var durations: [(title: String, minutes: Int?)] { [
+        (L("Süresiz"), nil), (L("30 dakika"), 30), (L("1 saat"), 60), (L("2 saat"), 120), (L("4 saat"), 240),
+    ] }
 
     func start(minutes: Int?) {
         stop()

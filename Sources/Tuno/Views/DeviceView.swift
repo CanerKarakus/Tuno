@@ -14,7 +14,8 @@ struct DeviceView: View {
 
     var body: some View {
         Form {
-            Section(scope == .output ? "Çıkış Aygıtı" : "Giriş Aygıtı") {
+            Section { PageHeader(page: scope == .output ? .output : .input) }
+            Section(scope == .output ? L("Çıkış Aygıtı") : L("Giriş Aygıtı")) {
                 ForEach(list) { device in
                     DeviceRow(device: device, scope: scope, isSelected: device.id == current?.id) {
                         devices.setDefault(device, scope: scope)
@@ -34,14 +35,14 @@ struct DeviceView: View {
                         Toggle(isOn: Binding(get: { devices.microphoneMuted },
                                              set: { devices.setMicrophoneMuted($0) })) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Mikrofonu kapat")
-                                Text("Tüm giriş aygıtları susturulur; kapalıyken menü çubuğunda kırmızı mikrofon görünür. Kısayol: ⌃⌥⇧M")
+                                Text(L("Mikrofonu kapat"))
+                                Text(L("Tüm mikrofonlar susturulur; menü çubuğunda kırmızı mikrofon görünür."))
                                     .font(.caption).foregroundStyle(.secondary)
                             }
-                        }
+                        }.searchAnchor("Mikrofonu kapat")
                     }
                     if controls.sampleRates.count > 1 {
-                        Picker("Örnekleme Hızı", selection: Binding(
+                        Picker(L("Örnekleme Hızı"), selection: Binding(
                             get: { controls.sampleRate },
                             set: { devices.setSampleRate($0, scope: scope) }
                         )) {
@@ -51,25 +52,25 @@ struct DeviceView: View {
                             }
                         }
                     } else if controls.sampleRate > 0 {
-                        LabeledContent("Örnekleme Hızı",
+                        LabeledContent(L("Örnekleme Hızı"),
                                        value: (controls.sampleRate / 1000).formatted() + " kHz")
                     }
                     if scope == .output {
-                        Picker("Ekolayzer", selection: Binding(
+                        Picker(L("Ekolayzer"), selection: Binding(
                             get: { equalizer.profile(for: current.uid) },
                             set: { equalizer.setProfile($0, for: current.uid) }
                         )) {
-                            Text("Genel ayar (\(equalizer.isEnabled ? equalizer.presetName : "Kapalı"))")
+                            Text(String(format: L("Genel ayar (%@)"), equalizer.isEnabled ? equalizer.presetName : L("Kapalı")))
                                 .tag(DeviceEQProfile.global)
-                            Text("Kapalı").tag(DeviceEQProfile.off)
+                            Text(L("Kapalı")).tag(DeviceEQProfile.off)
                             Divider()
                             ForEach(equalizer.allPresets) { preset in
                                 Text(preset.name).tag(DeviceEQProfile.preset(preset.id))
                             }
                         }
                     }
-                    LabeledContent("Bağlantı", value: current.transportLabel)
-                    LabeledContent("Kanal",
+                    LabeledContent(L("Bağlantı"), value: current.transportLabel)
+                    LabeledContent(L("Kanal"),
                                    value: "\(scope == .output ? current.outputChannels : current.inputChannels)")
                 }
             }
@@ -78,27 +79,28 @@ struct DeviceView: View {
 
             if scope == .output {
                 Section {
-                    Picker("Uyarı ve sistem sesleri", selection: Binding(
+                    Picker(L("Uyarı ve sistem sesleri"), selection: Binding(
                         get: { devices.systemOutputID },
                         set: { devices.setSystemOutput($0) }
                     )) {
                         ForEach(devices.outputDevices) { device in
                             Text(device.name).tag(device.id)
                         }
-                    }
+                    }.searchAnchor("Uyarı ve sistem sesleri")
                 } footer: {
-                    Text("Bildirim ve uyarı sesleri, müzik ve videolardan farklı bir aygıttan çalabilir.")
+                    Text(L("Bildirim ve uyarı sesleri, müzik ve videolardan farklı bir aygıttan çalabilir."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
+            PageFooter()
         }
         .formStyle(.grouped)
     }
 
     @ViewBuilder private var volumeRows: some View {
         if let volume = controls.volume, controls.canSetVolume {
-            LabeledContent(scope == .output ? "Çıkış Düzeyi" : "Giriş Düzeyi") {
+            LabeledContent(scope == .output ? L("Çıkış Düzeyi") : L("Giriş Düzeyi")) {
                 HStack {
                     VolumeSlider(
                         value: Binding(get: { volume }, set: { devices.setVolume($0, scope: scope) }),
@@ -124,37 +126,37 @@ struct DeviceView: View {
                 }
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Çıkış Düzeyi")
-                    Text("Yazılımsal").font(.caption).foregroundStyle(.blue)
+                    Text(L("Çıkış Düzeyi"))
+                    Text(L("Yazılımsal")).font(.caption).foregroundStyle(.blue)
                 }
             }
-            Toggle("Sessiz", isOn: Binding(
+            Toggle(L("Sessiz"), isOn: Binding(
                 get: { soft.muted },
                 set: { mixer.setSoftwareVolume(SoftwareVolume(volume: soft.volume, muted: $0), for: current.uid) }))
             NoticeRow(
                 symbol: "info.circle.fill", color: .blue,
-                text: "Bu aygıtın donanım ses denetimi yok (HDMI/DisplayPort'ta sık görülür). Ses Tuno tarafından yazılımsal olarak ayarlanıyor. Klavye ses tuşları için Klavye Kısayolları sayfasına bakın.")
+                text: L("Bu aygıtın donanım ses denetimi yok; ses Tuno tarafından yazılımsal ayarlanıyor."))
         } else {
             NoticeRow(
                 symbol: "info.circle.fill", color: .blue,
                 text: scope == .output
-                    ? "Bu aygıtın ses düzeyi ayarlanamıyor."
-                    : "Bu aygıtın giriş düzeyi ayarlanamıyor.")
+                    ? L("Bu aygıtın ses düzeyi ayarlanamıyor.")
+                    : L("Bu aygıtın giriş düzeyi ayarlanamıyor."))
         }
 
         if controls.canMute {
-            Toggle("Sessiz", isOn: Binding(
+            Toggle(L("Sessiz"), isOn: Binding(
                 get: { controls.muted },
                 set: { devices.setMuted($0, scope: scope) }))
         }
 
         if scope == .output, let balance = controls.balance, controls.canSetBalance {
-            LabeledContent("Denge") {
+            LabeledContent(L("Denge")) {
                 HStack(spacing: 8) {
-                    Text("Sol").font(.caption).foregroundStyle(.secondary)
+                    Text(L("Sol")).font(.caption).foregroundStyle(.secondary)
                     Slider(value: Binding(get: { balance }, set: { devices.setBalance(snapCenter($0)) }),
                            in: 0...1)
-                    Text("Sağ").font(.caption).foregroundStyle(.secondary)
+                    Text(L("Sağ")).font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -172,11 +174,11 @@ private struct InputLevelRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            LabeledContent("Giriş Seviyesi") {
+            LabeledContent(L("Giriş Seviyesi")) {
                 HStack(spacing: 10) {
                     LevelMeter(level: meter.level, peak: meter.peak, isActive: meter.isRunning)
                         .frame(width: 220, height: 10)
-                    Button(meter.isRunning ? "Durdur" : "Test Et") { meter.toggle() }
+                    Button(meter.isRunning ? L("Durdur") : L("Test Et")) { meter.toggle() }
                 }
             }
             if let error = meter.error {
@@ -225,13 +227,13 @@ private struct VolumeLimitRows: View {
         let limit = devices.volumeLimit(for: uid)
         Toggle(isOn: Binding(get: { limit != nil }, set: { devices.setVolumeLimit($0 ? 0.7 : nil, for: uid) })) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Ses sınırı")
-                Text("Ses tuşlarıyla ya da uygulamalardan bu düzeyin üstüne çıkılamaz.")
+                Text(L("Ses sınırı"))
+                Text(L("Ses tuşlarıyla ya da uygulamalardan bu düzeyin üstüne çıkılamaz."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-        }
+        }.searchAnchor("Ses sınırı")
         if let limit {
-            LabeledContent("En yüksek düzey") {
+            LabeledContent(L("En yüksek düzey")) {
                 HStack {
                     VolumeSlider(value: Binding(get: { limit }, set: { devices.setVolumeLimit($0, for: uid) }))
                     Text(limit.percentText)

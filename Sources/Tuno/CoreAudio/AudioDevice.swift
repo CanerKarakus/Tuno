@@ -24,7 +24,7 @@ struct AudioDevice: Identifiable, Hashable {
         guard let uid = id.readString(.init(kAudioDevicePropertyDeviceUID)) else { return nil }
         self.id = id
         self.uid = uid
-        self.name = id.readString(.init(kAudioObjectPropertyName)) ?? "Adsız Aygıt"
+        self.name = id.readString(.init(kAudioObjectPropertyName)) ?? L("Adsız Aygıt")
         self.transportType = id.read(.init(kAudioDevicePropertyTransportType), initial: UInt32(0)) ?? 0
         self.outputChannels = id.channelCount(scope: kAudioObjectPropertyScopeOutput)
         self.inputChannels = id.channelCount(scope: kAudioObjectPropertyScopeInput)
@@ -39,18 +39,18 @@ struct AudioDevice: Identifiable, Hashable {
 
     var transportLabel: String {
         switch transportType {
-        case kAudioDeviceTransportTypeBuiltIn: "Dahili"
-        case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: "Bluetooth"
-        case kAudioDeviceTransportTypeUSB: "USB"
-        case kAudioDeviceTransportTypeHDMI: "HDMI"
-        case kAudioDeviceTransportTypeDisplayPort: "DisplayPort"
-        case kAudioDeviceTransportTypeAirPlay: "AirPlay"
-        case kAudioDeviceTransportTypeThunderbolt: "Thunderbolt"
-        case kAudioDeviceTransportTypeAggregate, kAudioDeviceTransportTypeAutoAggregate: "Birleşik"
-        case kAudioDeviceTransportTypeVirtual: "Sanal"
+        case kAudioDeviceTransportTypeBuiltIn: L("Dahili")
+        case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: L("Bluetooth")
+        case kAudioDeviceTransportTypeUSB: L("USB")
+        case kAudioDeviceTransportTypeHDMI: L("HDMI")
+        case kAudioDeviceTransportTypeDisplayPort: L("DisplayPort")
+        case kAudioDeviceTransportTypeAirPlay: L("AirPlay")
+        case kAudioDeviceTransportTypeThunderbolt: L("Thunderbolt")
+        case kAudioDeviceTransportTypeAggregate, kAudioDeviceTransportTypeAutoAggregate: L("Birleşik")
+        case kAudioDeviceTransportTypeVirtual: L("Sanal")
         case kAudioDeviceTransportTypeContinuityCaptureWired,
-             kAudioDeviceTransportTypeContinuityCaptureWireless: "Süreklilik"
-        default: "Harici"
+             kAudioDeviceTransportTypeContinuityCaptureWireless: L("Süreklilik")
+        default: L("Harici")
         }
     }
 

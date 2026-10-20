@@ -11,19 +11,19 @@ enum PermissionKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .audioCapture: "Sistem Sesi Kaydı"
-        case .microphone: "Mikrofon"
-        case .accessibility: "Erişilebilirlik"
-        case .screenRecording: "Ekran Kaydı"
+        case .audioCapture: L("Sistem Sesi Kaydı")
+        case .microphone: L("Mikrofon")
+        case .accessibility: L("Erişilebilirlik")
+        case .screenRecording: L("Ekran Kaydı")
         }
     }
 
     var detail: String {
         switch self {
-        case .audioCapture: "Uygulama başına ses, ses yükseltme, ekolayzer ve HDMI ses denetimi. Ses kaydedilmez."
-        case .microphone: "Giriş sayfasındaki mikrofon seviye testi."
-        case .accessibility: "Kısayollar, fare tuşları ve kaydırma, orta tık, parlaklık tuşları, pencereleri öne getirme."
-        case .screenRecording: "Alt-Tab ve Dock pencere önizlemeleri. İzin verildikten sonra Tuno yeniden başlatılmalıdır."
+        case .audioCapture: L("Uygulama başına ses, ses yükseltme, ekolayzer ve HDMI ses denetimi. Ses kaydedilmez.")
+        case .microphone: L("Giriş sayfasındaki mikrofon seviye testi.")
+        case .accessibility: L("Kısayollar, fare tuşları ve kaydırma, orta tık, parlaklık tuşları, pencereleri öne getirme.")
+        case .screenRecording: L("Alt-Tab ve Dock pencere önizlemeleri. İzin verildikten sonra Tuno yeniden başlatılmalıdır.")
         }
     }
 
@@ -116,15 +116,15 @@ final class Permissions {
         case .screenRecording:
             // İlk seferde yalnızca sistem iletişim kutusu: Tuno'yu listeye o ekler ve ayarları kendisi açar.
             // Ayarları burada da açmak, Tuno listede yokken sayfayı öne getiriyordu.
-            if UserDefaults.standard.bool(forKey: Self.screenRequestedKey) {
-                openSettings(kind)
-            } else {
-                UserDefaults.standard.set(true, forKey: Self.screenRequestedKey)
-                // Yeni macOS'ta Tuno'yu "Ekran ve Sistem Sesi Kaydı" listesine yalnızca gerçek bir
-                // ScreenCaptureKit isteği ekliyor; CGRequestScreenCaptureAccess tek başına eklemiyor.
-                _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-                if !CGPreflightScreenCaptureAccess() { _ = CGRequestScreenCaptureAccess() }
-            }
+            let askedBefore = UserDefaults.standard.bool(forKey: Self.screenRequestedKey)
+            UserDefaults.standard.set(true, forKey: Self.screenRequestedKey)
+            // Her seferinde macOS'a gerçekten sorulur: Tuno'yu "Ekran ve Sistem Sesi Kaydı" listesine yalnızca gerçek
+            // bir ScreenCaptureKit isteği ekliyor. İzinler sıfırlanmışsa (tccutil, yeniden kurulum) liste boştur ve
+            // yalnızca Ayarlar'ı açmak Tuno'yu oraya getirmez; kullanıcı elle eklemek zorunda kalırdı.
+            _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            if !CGPreflightScreenCaptureAccess() { _ = CGRequestScreenCaptureAccess() }
+            // Daha önce sorulduysa macOS iletişim kutusunu yeniden göstermez; ayarlar açılır (Tuno artık listede).
+            if askedBefore && !CGPreflightScreenCaptureAccess() { openSettings(kind) }
         }
         refresh()
     }
@@ -169,7 +169,7 @@ final class Permissions {
     }
 }
 
-/// "Sistem Sesi Kaydı" (process tap) izni için public bir sorgu API'si yok; TCC çerçevesinin
+/// L("Sistem Sesi Kaydı") (process tap) izni için public bir sorgu API'si yok; TCC çerçevesinin
 /// kendi işlevleri kullanılır (Apple'ın AudioCap örneğindeki yöntem).
 enum AudioCaptureTCC {
     private typealias Preflight = @convention(c) (CFString, CFDictionary?) -> Int

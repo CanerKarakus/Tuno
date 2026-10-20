@@ -48,15 +48,15 @@ struct MenuBarView: View {
                 Text(summary).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            HeaderButton(symbol: "power", help: "Tuno'dan Çık", isActive: confirmingQuit) {
+            HeaderButton(symbol: "power", help: L("Tuno'dan Çık"), isActive: confirmingQuit) {
                 withAnimation(.snappy(duration: 0.25)) { confirmingQuit.toggle() }
             }
             if clipboard.isEnabled {
-                HeaderButton(symbol: "doc.on.clipboard", help: "Pano Geçmişi (⌘⇧V)") {
+                HeaderButton(symbol: "doc.on.clipboard", help: L("Pano Geçmişi (⌘⇧V)")) {
                     withAnimation(.snappy(duration: 0.25)) { panelState.mode = .clipboard }
                 }
             }
-            HeaderButton(symbol: "gearshape.fill", help: "Tuno Ayarları") {
+            HeaderButton(symbol: "gearshape.fill", help: L("Tuno Ayarları")) {
                 actions.openSettings()
             }
         }
@@ -65,7 +65,7 @@ struct MenuBarView: View {
 
     private var summary: String {
         let playing = mixer.apps.filter(\.isPlaying).count
-        return playing == 0 ? "Sessiz" : "\(playing) uygulama ses çalıyor"
+        return playing == 0 ? L("Sessiz") : String(format: L("%d uygulama ses çalıyor"), playing)
     }
 }
 
@@ -81,8 +81,8 @@ private struct QuitConfirmation: View {
                     .font(.system(size: 22))
                     .foregroundStyle(.white, .red)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Tuno'dan çıkılsın mı?").font(.system(size: 13, weight: .semibold))
-                    Text("Uygulama sesleri ve ekolayzer varsayılana döner.")
+                    Text(L("Tuno'dan çıkılsın mı?")).font(.system(size: 13, weight: .semibold))
+                    Text(L("Uygulama sesleri ve ekolayzer varsayılana döner."))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -90,12 +90,12 @@ private struct QuitConfirmation: View {
             }
             HStack(spacing: 8) {
                 Button(action: onCancel) {
-                    Text("Vazgeç").frame(maxWidth: .infinity)
+                    Text(L("Vazgeç")).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PanelButtonStyle(fill: Color.primary.opacity(0.1), foreground: .primary))
                 .keyboardShortcut(.cancelAction)
                 Button(action: onQuit) {
-                    Text("Çık").frame(maxWidth: .infinity)
+                    Text(L("Çık")).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PanelButtonStyle(fill: .red, foreground: .white))
                 .keyboardShortcut(.defaultAction)
@@ -193,8 +193,8 @@ private struct OutputModule: View {
         Module {
             let output = DefaultOutputVolume(devices: devices, mixer: mixer)
             let volume = output.volume
-            ModuleTitle(title: output.isSoftware ? "Ses · Yazılımsal" : "Ses",
-                        trailing: output.isAvailable ? (output.muted ? "Sessiz" : volume.percentText) : nil)
+            ModuleTitle(title: output.isSoftware ? L("Ses · Yazılımsal") : L("Ses"),
+                        trailing: output.isAvailable ? (output.muted ? L("Sessiz") : volume.percentText) : nil)
 
             if output.isAvailable {
                 CapsuleSlider(
@@ -203,7 +203,7 @@ private struct OutputModule: View {
                     isDimmed: output.muted)
                     .onTapGesture(count: 2) { output.toggleMute() }
             } else {
-                Label("Bu aygıt ses denetimini desteklemiyor", systemImage: "info.circle")
+                Label(L("Bu aygıt ses denetimini desteklemiyor"), systemImage: "info.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -215,7 +215,7 @@ private struct OutputModule: View {
                     DeviceBadge(symbol: devices.defaultOutput?.symbolName(for: .output) ?? "hifispeaker",
                                 isSelected: true)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(devices.defaultOutput?.name ?? "Çıkış yok")
+                        Text(devices.defaultOutput?.name ?? L("Çıkış yok"))
                             .font(.system(size: 12, weight: .medium))
                             .lineLimit(1)
                         Text(devices.defaultOutput?.transportLabel ?? "")
@@ -259,7 +259,7 @@ private struct DisplaysModule: View {
 
     var body: some View {
         Module {
-            ModuleTitle(title: "Ekran Parlaklığı")
+            ModuleTitle(title: L("Ekran Parlaklığı"))
             ForEach(displays.displays) { display in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
@@ -300,7 +300,7 @@ struct ResolutionMenu: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "rectangle.expand.diagonal")
-                Text(current?.title ?? "Çözünürlük")
+                Text(current?.title ?? L("Çözünürlük"))
             }
             .font(.system(size: 11))
         }
@@ -322,12 +322,12 @@ private struct QuickTogglesModule: View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
                 QuickTile(symbol: devices.microphoneMuted ? "mic.slash.fill" : "mic.fill",
-                          title: "Mikrofon", subtitle: devices.microphoneMuted ? "Kapalı" : "Açık",
+                          title: L("Mikrofon"), subtitle: devices.microphoneMuted ? L("Kapalı") : L("Açık"),
                           tint: devices.microphoneMuted ? .red : nil,
                           onIcon: { devices.setMicrophoneMuted(!devices.microphoneMuted) },
                           onBody: { devices.setMicrophoneMuted(!devices.microphoneMuted) })
                 QuickTile(symbol: keepAwake.isActive ? "cup.and.heat.waves.fill" : "cup.and.saucer.fill",
-                          title: "Uyanık Tut", subtitle: awakeSubtitle,
+                          title: L("Uyanık Tut"), subtitle: awakeSubtitle,
                           tint: keepAwake.isActive ? .orange : nil,
                           accessory: showDurations ? "chevron.up" : "chevron.down",
                           onIcon: { withAnimation(.snappy(duration: 0.25)) { keepAwake.toggle() } },
@@ -370,7 +370,7 @@ private struct QuickTogglesModule: View {
                                     .foregroundStyle(.secondary)
                                     .frame(width: 24, height: 24)
                                     .background(Color.primary.opacity(0.08), in: Circle())
-                                Text("Uykuya izin ver").font(.system(size: 12))
+                                Text(L("Uykuya izin ver")).font(.system(size: 12))
                                 Spacer()
                             }
                         }
@@ -385,9 +385,9 @@ private struct QuickTogglesModule: View {
     }
 
     private var awakeSubtitle: String {
-        guard keepAwake.isActive else { return "Kapalı" }
-        guard let end = keepAwake.endsAt else { return "Süresiz" }
-        return end.formatted(date: .omitted, time: .shortened) + "'e kadar"
+        guard keepAwake.isActive else { return L("Kapalı") }
+        guard let end = keepAwake.endsAt else { return L("Süresiz") }
+        return String(format: L("%@'e kadar"), end.formatted(date: .omitted, time: .shortened))
     }
 }
 
@@ -452,7 +452,7 @@ private struct BatteryModule: View {
 
     var body: some View {
         Module {
-            ModuleTitle(title: "Pil")
+            ModuleTitle(title: L("Pil"))
             ForEach(battery.devices) { device in
                 HStack(spacing: 8) {
                     Image(systemName: device.isHeadphones ? "headphones" : "hifispeaker.fill")
@@ -496,7 +496,7 @@ private struct EqualizerModule: View {
             HStack(spacing: 10) {
                 SettingsIcon(symbol: "slider.vertical.3", color: equalizer.isEnabled ? .purple : .gray, size: 26)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Ekolayzer").font(.system(size: 13, weight: .semibold))
+                    Text(L("Ekolayzer")).font(.system(size: 13, weight: .semibold))
                     Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer()
@@ -517,7 +517,7 @@ private struct EqualizerModule: View {
                 .menuIndicator(.hidden)
                 .fixedSize()
                 .foregroundStyle(.secondary)
-                Toggle("Ekolayzer", isOn: $equalizer.isEnabled)
+                Toggle(L("Ekolayzer"), isOn: $equalizer.isEnabled)
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.mini)
@@ -528,12 +528,12 @@ private struct EqualizerModule: View {
     private var subtitle: String {
         if let uid = devices.defaultOutput?.uid {
             switch equalizer.profile(for: uid) {
-            case .off: return "Bu aygıtta kapalı"
-            case .preset(let id): return "\(equalizer.preset(id: id)?.name ?? "Özel") · aygıt profili"
+            case .off: return L("Bu aygıtta kapalı")
+            case .preset(let id): return String(format: L("%@ · aygıt profili"), equalizer.preset(id: id)?.name ?? L("Özel"))
             case .global: break
             }
         }
-        return equalizer.isEnabled ? equalizer.presetName : "Kapalı"
+        return equalizer.isEnabled ? equalizer.presetName : L("Kapalı")
     }
 }
 
@@ -542,7 +542,7 @@ private struct AppsModule: View {
 
     var body: some View {
         Module {
-            ModuleTitle(title: "Uygulamalar", trailing: mixer.apps.isEmpty ? nil : "\(mixer.apps.count)")
+            ModuleTitle(title: L("Uygulamalar"), trailing: mixer.apps.isEmpty ? nil : "\(mixer.apps.count)")
 
             if let error = mixer.lastError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
@@ -556,7 +556,7 @@ private struct AppsModule: View {
                     Image(systemName: "speaker.zzz")
                         .font(.title2)
                         .foregroundStyle(.tertiary)
-                    Text("Ses çalan uygulama yok")
+                    Text(L("Ses çalan uygulama yok"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -605,7 +605,7 @@ private struct MenuAppRow: View {
                         }
                 }
                 .buttonStyle(.plain)
-                .help(settings.muted ? "Sesi Aç" : "Sessize Al")
+                .help(settings.muted ? L("Sesi Aç") : L("Sessize Al"))
 
                 Text(app.name)
                     .font(.system(size: 12, weight: .medium))
@@ -620,7 +620,7 @@ private struct MenuAppRow: View {
 
                 Spacer(minLength: 4)
 
-                Text(settings.muted ? "Sessiz" : settings.volume.percentText)
+                Text(settings.muted ? L("Sessiz") : settings.volume.percentText)
                     .font(.system(size: 11, weight: boosted ? .semibold : .regular).monospacedDigit())
                     .foregroundStyle(settings.muted ? Color.secondary : BoostStyle.color(for: settings.volume) ?? .secondary)
                     .contentTransition(.numericText())
@@ -640,8 +640,8 @@ private struct MenuAppRow: View {
                 height: 16)
         }
         .contextMenu {
-            Button(settings.muted ? "Sesi Aç" : "Sessize Al") { mixer.toggleMute(app) }
-            Button("Varsayılana Döndür") { mixer.reset(app) }
+            Button(settings.muted ? L("Sesi Aç") : L("Sessize Al")) { mixer.toggleMute(app) }
+            Button(L("Varsayılana Döndür")) { mixer.reset(app) }
         }
     }
 }

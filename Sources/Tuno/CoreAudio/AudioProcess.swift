@@ -78,7 +78,7 @@ struct AudioApp: Identifiable, Hashable {
         if let bundleID = process.bundleID, let last = bundleID.split(separator: ".").last {
             return String(last)
         }
-        return "Süreç \(process.pid)"
+        return String(format: L("Süreç %d"), Int(process.pid))
     }
 
     /// Yardımcı süreçleri (WebKit, Chrome Helper…) asıl uygulamaya bağlamak için.

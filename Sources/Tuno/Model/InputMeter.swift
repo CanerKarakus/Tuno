@@ -45,7 +45,7 @@ final class InputMeter {
     }
 
     private func denied() {
-        error = "Mikrofon izni yok. Sistem Ayarları › Gizlilik ve Güvenlik › Mikrofon bölümünden izin verin."
+        error = L("Mikrofon izni yok. Sistem Ayarları › Gizlilik ve Güvenlik › Mikrofon bölümünden izin verin.")
     }
 
     private func startEngine() {
@@ -53,7 +53,7 @@ final class InputMeter {
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.channelCount > 0 else {
-            error = "Giriş aygıtı kullanılamıyor."
+            error = L("Giriş aygıtı kullanılamıyor.")
             return
         }
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
@@ -72,7 +72,7 @@ final class InputMeter {
             isRunning = true
             error = nil
         } catch {
-            self.error = "Mikrofon başlatılamadı: \(error.localizedDescription)"
+            self.error = String(format: L("Mikrofon başlatılamadı: %@"), error.localizedDescription)
         }
     }
 

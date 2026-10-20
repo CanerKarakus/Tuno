@@ -20,27 +20,27 @@ enum Shortcut: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .frontVolumeUp: "Öndeki uygulamanın sesini aç"
-        case .frontVolumeDown: "Öndeki uygulamanın sesini kıs"
-        case .frontMute: "Öndeki uygulamayı sessize al"
-        case .toggleEqualizer: "Ekolayzeri aç / kapat"
-        case .nextOutput: "Sonraki çıkış aygıtına geç"
-        case .clipboardHistory: "Pano geçmişini göster"
-        case .switchWindows: "Pencereler arasında geçiş (⇧ ile geri, yazarak ara)"
-        case .switchWindowsBackward: "Pencereler arasında geri geçiş"
-        case .microphoneMute: "Mikrofonu sessize al / aç"
-        case .keepAwake: "Uyanık tut (süresiz) / kapat"
-        case .snapLeft: "Pencereyi sol yarıya yerleştir"
-        case .snapRight: "Pencereyi sağ yarıya yerleştir"
-        case .snapMaximize: "Pencereyi ekranı kaplayacak şekilde büyüt"
-        case .snapCenter: "Pencereyi ortala"
-        case .snapTopHalf: "Pencereyi üst yarıya yerleştir"
-        case .snapBottomHalf: "Pencereyi alt yarıya yerleştir"
-        case .snapLeftThird: "Pencereyi sol üçte bire yerleştir"
-        case .snapCenterThird: "Pencereyi orta üçte bire yerleştir"
-        case .snapRightThird: "Pencereyi sağ üçte bire yerleştir"
-        case .snapLeftTwoThirds: "Pencereyi sol üçte ikiye yerleştir"
-        case .snapRightTwoThirds: "Pencereyi sağ üçte ikiye yerleştir"
+        case .frontVolumeUp: L("Öndeki uygulamanın sesini aç")
+        case .frontVolumeDown: L("Öndeki uygulamanın sesini kıs")
+        case .frontMute: L("Öndeki uygulamayı sessize al")
+        case .toggleEqualizer: L("Ekolayzeri aç / kapat")
+        case .nextOutput: L("Sonraki çıkış aygıtına geç")
+        case .clipboardHistory: L("Pano geçmişini göster")
+        case .switchWindows: L("Pencereler arasında geçiş (⇧ ile geri, yazarak ara)")
+        case .switchWindowsBackward: L("Pencereler arasında geri geçiş")
+        case .microphoneMute: L("Mikrofonu sessize al / aç")
+        case .keepAwake: L("Uyanık tut (süresiz) / kapat")
+        case .snapLeft: L("Pencereyi sol yarıya yerleştir")
+        case .snapRight: L("Pencereyi sağ yarıya yerleştir")
+        case .snapMaximize: L("Pencereyi ekranı kaplayacak şekilde büyüt")
+        case .snapCenter: L("Pencereyi ortala")
+        case .snapTopHalf: L("Pencereyi üst yarıya yerleştir")
+        case .snapBottomHalf: L("Pencereyi alt yarıya yerleştir")
+        case .snapLeftThird: L("Pencereyi sol üçte bire yerleştir")
+        case .snapCenterThird: L("Pencereyi orta üçte bire yerleştir")
+        case .snapRightThird: L("Pencereyi sağ üçte bire yerleştir")
+        case .snapLeftTwoThirds: L("Pencereyi sol üçte ikiye yerleştir")
+        case .snapRightTwoThirds: L("Pencereyi sağ üçte ikiye yerleştir")
         }
     }
 
@@ -250,14 +250,14 @@ final class ShortcutCenter {
                     maximum: Float(max(UserDefaults.standard.double(forKey: PreferenceKey.maxBoost, default: 1.5), 1)),
                     muted: settings.muted)
             } else {
-                let name = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Uygulama"
-                VolumeHUD.shared.show(symbol: "speaker.slash", title: "\(name) ses çalmıyor")
+                let name = NSWorkspace.shared.frontmostApplication?.localizedName ?? L("Uygulama")
+                VolumeHUD.shared.show(symbol: "speaker.slash", title: String(format: L("%@ ses çalmıyor"), name))
             }
         case .toggleEqualizer:
             mixer.equalizer.isEnabled.toggle()
             VolumeHUD.shared.show(
                 symbol: "slider.vertical.3",
-                title: mixer.equalizer.isEnabled ? "Ekolayzer: \(mixer.equalizer.presetName)" : "Ekolayzer kapalı")
+                title: mixer.equalizer.isEnabled ? String(format: L("Ekolayzer: %@"), mixer.equalizer.presetName) : L("Ekolayzer kapalı"))
         case .clipboardHistory:
             onClipboard?()
         case .switchWindows, .switchWindowsBackward:

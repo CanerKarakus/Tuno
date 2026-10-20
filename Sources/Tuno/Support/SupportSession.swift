@@ -67,7 +67,7 @@ final class SupportSession {
         self.updater = updater
         if let version = UserDefaults.standard.string(forKey: SupportPin.switchedKey) {
             UserDefaults.standard.removeObject(forKey: SupportPin.switchedKey)
-            if version == UpdateDelegate.currentVersion { notice = "Tuno Destek, Tuno'yu \(version) sürümüne geçirdi." }
+            if version == UpdateDelegate.currentVersion { notice = String(format: L("Tuno Destek, Tuno'yu %@ sürümüne geçirdi."), version) }
         }
         // Sabitlenen sürümden elle başka bir sürüme geçildiyse sabitleme kalkar.
         if let pinned = pinnedVersion, pinned != UpdateDelegate.currentVersion { unpin() }
@@ -81,9 +81,9 @@ final class SupportSession {
         case code, rate, network
         var errorDescription: String? {
             switch self {
-            case .code: "Kod geçersiz ya da süresi dolmuş. Tuno Destek'ten yeni bir kod iste."
-            case .rate: "Çok fazla deneme yapıldı. Birkaç dakika sonra yeniden dene."
-            case .network: "Sunucuya ulaşılamadı. İnternet bağlantını kontrol et."
+            case .code: L("Kod geçersiz ya da süresi dolmuş. Tuno Destek'ten yeni bir kod iste.")
+            case .rate: L("Çok fazla deneme yapıldı. Birkaç dakika sonra yeniden dene.")
+            case .network: L("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.")
             }
         }
     }
@@ -115,7 +115,7 @@ final class SupportSession {
     /// Kullanıcı Destek sayfasından ya da menü çubuğundan sonlandırdı.
     func end() {
         guard let token else { return }
-        finish(notice: "Destek oturumunu sonlandırdın.")
+        finish(notice: L("Destek oturumunu sonlandırdın."))
         Task { _ = try? await Self.post(["action": "end", "token": token, "reason": "user"], timeout: 8) }
     }
 
@@ -188,7 +188,7 @@ final class SupportSession {
                     self.acks = sending + self.acks
                     failures += 1
                     // Sunucu 20 saniye haber alamayınca oturumu kapatır; burada da aynı sürede bırakılır.
-                    if failures >= 15 { self.finish(notice: "Bağlantı koptuğu için destek oturumu kapandı."); return }
+                    if failures >= 15 { self.finish(notice: L("Bağlantı koptuğu için destek oturumu kapandı.")); return }
                 }
                 try? await Task.sleep(for: .seconds(1))
             }
@@ -197,11 +197,11 @@ final class SupportSession {
 
     private static func endNotice(_ reason: String?) -> String {
         switch reason {
-        case "admin": "Tuno Destek oturumu kapattı."
-        case "expired": "Destek oturumunun süresi doldu."
-        case "timeout": "Bağlantı koptuğu için destek oturumu kapandı."
-        case "replaced": "Tuno Destek yeni bir oturum başlattı."
-        default: "Destek oturumu kapandı."
+        case "admin": L("Tuno Destek oturumu kapattı.")
+        case "expired": L("Destek oturumunun süresi doldu.")
+        case "timeout": L("Bağlantı koptuğu için destek oturumu kapandı.")
+        case "replaced": L("Tuno Destek yeni bir oturum başlattı.")
+        default: L("Destek oturumu kapandı.")
         }
     }
 
@@ -219,7 +219,7 @@ final class SupportSession {
             Task { await switchVersion(id: id, payload: payload) }
         case "unpin":
             unpin()
-            record("Normal güncellemelere döndürüldü")
+            record(L("Normal güncellemelere döndürüldü"))
             ack(id, "done")
         case "set":
             guard let app, let key = payload["key"] as? String, let value = payload["value"] else { ack(id, "failed", "Geçersiz istek"); return }
@@ -236,11 +236,11 @@ final class SupportSession {
             let on = payload["on"] as? Bool ?? false
             SupportLog.setVerbose(on)
             verboseUntil = SupportLog.verboseUntil
-            record(on ? "Ayrıntılı günlük açıldı (24 saat)" : "Ayrıntılı günlük kapatıldı")
+            record(on ? L("Ayrıntılı günlük açıldı (24 saat)") : L("Ayrıntılı günlük kapatıldı"))
             ack(id, "done")
         case "message":
             guard let text = payload["text"] as? String, !text.isEmpty else { ack(id, "failed", "Boş mesaj"); return }
-            record("Mesaj: \(text)")
+            record(String(format: L("Mesaj: %@"), text))
             ack(id, "done", "Gösterildi")
             Task { Self.showMessage(String(text.prefix(500))) }
         case "reset", "restore":
@@ -278,7 +278,7 @@ final class SupportSession {
         do {
             let (status, _) = try await Self.post(["action": "upload", "token": token, "command": id, "kind": "diagnostics", "data": package], timeout: 60)
             guard status == 200 else { throw URLError(.badServerResponse) }
-            record("Tanılama paketi gönderildi")
+            record(L("Tanılama paketi gönderildi"))
             ack(id, "done", "Paket alındı")
         } catch {
             ack(id, "failed", "Paket gönderilemedi")
@@ -288,19 +288,19 @@ final class SupportSession {
     private func restoreSettings(id: Int, backup: String?) async {
         let alert = NSAlert()
         if let backup, let item = SettingsBackup.list().first(where: { $0.id == backup }) {
-            alert.messageText = "Tuno Destek ayarlarını bir yedeğe döndürmek istiyor"
-            alert.informativeText = "Ayarların \(item.date.formatted(date: .long, time: .shortened)) tarihindeki haline döner (\(item.reason)). "
-                + "Şu anki ayarların önce yedeklenir. Tuno kapanıp yeniden açılır."
+            alert.messageText = L("Tuno Destek ayarlarını bir yedeğe döndürmek istiyor")
+            alert.informativeText = String(format: L("Ayarların %@ tarihindeki haline döner (%@). "), item.date.formatted(date: .long, time: .shortened), item.reason)
+                + L("Şu anki ayarların önce yedeklenir. Tuno kapanıp yeniden açılır.")
         } else if backup != nil {
             ack(id, "failed", "Yedek bulunamadı")
             return
         } else {
-            alert.messageText = "Tuno Destek ayarlarını sıfırlamak istiyor"
-            alert.informativeText = "Tuno'nun tüm ayarları varsayılana döner. Şu anki ayarların önce yedeklenir; istersen sonra geri dönebilirsin. "
-                + "Pano geçmişin silinmez. Tuno kapanıp yeniden açılır."
+            alert.messageText = L("Tuno Destek ayarlarını sıfırlamak istiyor")
+            alert.informativeText = L("Tuno'nun tüm ayarları varsayılana döner. Şu anki ayarların önce yedeklenir; istersen sonra geri dönebilirsin. ")
+                + L("Pano geçmişin silinmez. Tuno kapanıp yeniden açılır.")
         }
-        alert.addButton(withTitle: "Onayla")
-        alert.addButton(withTitle: "Vazgeç")
+        alert.addButton(withTitle: L("Onayla"))
+        alert.addButton(withTitle: L("Vazgeç"))
         alert.icon = NSApp.applicationIconImage
         NSApp.activate()
         guard alert.runModal() == .alertFirstButtonReturn else { ack(id, "declined"); return }
@@ -316,13 +316,13 @@ final class SupportSession {
         do {
             if let backup { try SettingsBackup.restoreAndRelaunch(backup) } else { try SettingsBackup.resetAndRelaunch() }
         } catch {
-            finish(notice: "Ayarlar değiştirilemedi.")
+            finish(notice: L("Ayarlar değiştirilemedi."))
         }
     }
 
     private static func showMessage(_ text: String) {
         let alert = NSAlert()
-        alert.messageText = "Tuno Destek'ten mesaj"
+        alert.messageText = L("Tuno Destek'ten mesaj")
         alert.informativeText = text
         alert.icon = NSApp.applicationIconImage
         NSApp.activate()
@@ -339,11 +339,11 @@ final class SupportSession {
         // Kullanıcı düşünürken oturum kapanmış olabilir.
         guard isActive, let token else { return }
         ack(id, "running")
-        busy = "Tuno \(target.version) indiriliyor ve doğrulanıyor…"
+        busy = String(format: L("Tuno %@ indiriliyor ve doğrulanıyor…"), target.version)
         do {
             let staged = try await VersionSwitcher.prepare(target)
             guard isActive, self.token == token else { return }
-            busy = "Tuno \(target.version) kuruluyor…"
+            busy = String(format: L("Tuno %@ kuruluyor…"), target.version)
             ack(id, "done", "Tuno yeniden açılıyor")
             let pending = acks
             acks = []
@@ -357,14 +357,14 @@ final class SupportSession {
             do { try VersionSwitcher.relaunch(with: staged) } catch {
                 SupportPin.set(previousPin)
                 UserDefaults.standard.removeObject(forKey: SupportPin.switchedKey)
-                finish(notice: "Sürüm değiştirilemedi.")
+                finish(notice: L("Sürüm değiştirilemedi."))
                 throw error
             }
         } catch {
             busy = nil
             ack(id, "failed", error.localizedDescription)
             let alert = NSAlert()
-            alert.messageText = "Sürüm değiştirilemedi"
+            alert.messageText = L("Sürüm değiştirilemedi")
             alert.informativeText = error.localizedDescription
             NSApp.activate()
             alert.runModal()

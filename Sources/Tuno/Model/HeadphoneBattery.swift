@@ -47,7 +47,7 @@ final class HeadphoneBattery {
               let controller = (root["SPBluetoothDataType"] as? [[String: Any]])?.first,
               let connected = controller["device_connected"] as? [[String: Any]]
         else { return [] }
-        let labels = [("Left", "Sol"), ("Right", "Sağ"), ("Case", "Kutu"), ("Main", "")]
+        let labels = [("Left", L("Sol")), ("Right", L("Sağ")), ("Case", L("Kutu")), ("Main", "")]
         return connected.flatMap { $0.map { name, value -> Device? in
             guard let info = value as? [String: Any] else { return nil }
             let levels = labels.compactMap { key, label -> Device.Level? in

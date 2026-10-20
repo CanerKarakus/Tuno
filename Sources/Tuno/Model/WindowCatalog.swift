@@ -132,9 +132,17 @@ enum WindowCatalog {
     /// Pencereyi (gerekirse küçültülmüşten çıkararak) öne getirir ve uygulamasını etkinleştirir.
     static func focus(_ info: WindowInfo) {
         if let window = ownWindow(info) {
-            if window.isMiniaturized { window.deminiaturize(nil) }
-            NSApp.activate()
-            window.makeKeyAndOrderFront(nil)
+            // Tuno kapatılmış ya da erişilebilirlik modunda (Dock'tan gizli) olabilir; önce normal moda geçilir,
+            // yoksa pencere öne gelmez. Alt-Tab paneli kapandıktan sonra çalışsın diye bir tur sonra.
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    NSApp.setActivationPolicy(.regular)
+                    if window.isMiniaturized { window.deminiaturize(nil) }
+                    NSApp.activate(ignoringOtherApps: true)
+                    window.makeKeyAndOrderFront(nil)
+                    window.orderFrontRegardless()
+                }
+            }
             return
         }
         let found = raise(info)

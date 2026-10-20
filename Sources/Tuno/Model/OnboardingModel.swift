@@ -2,17 +2,20 @@ import AVFoundation
 import AppKit
 import Observation
 
-enum OnboardingPhase { case permissions, tour }
+enum OnboardingPhase: Hashable { case language, theme, permissions, tour }
 
-/// İlk açılış akışı:
-/// - İzinlerden biri eksikse yalnızca izin ekranı açılır (ana pencere görünmez).
-/// - "Daha Sonra" → izin ekranı 1 gün sonra yeniden gösterilir (tümü verilene kadar).
-/// - Tüm izinler verilince ya da "Daha Sonra"ya basılınca kısa tanıtım bir kez gösterilir.
-/// - Hiçbiri gerekmiyorsa doğrudan ana pencere açılır.
+/// İlk açılış akışı (en fazla 4 adım, sayfa noktalarıyla):
+/// 1. Dil — seçilmeden ilerlenmez (ilk kurulum ve 1.4.7'den yükseltenler).
+/// 2. Görünüm — açık, koyu ya da otomatik.
+/// 3. Hazır — tanıtım, bir kez.
+/// 4. İzinler — yalnızca eksik izin varsa; "Daha Sonra Hatırlat" izin ekranını 1 gün erteler. Sonra uygulama açılır.
+/// Gerekmeyen adımlar atlanır; hiçbiri gerekmiyorsa doğrudan ana pencere açılır.
 @Observable
 @MainActor
 final class OnboardingModel {
     var phase: OnboardingPhase
+    /// Bu açılışta gösterilecek adımlar (sayfa noktaları); açılışta bir kez belirlenir.
+    private(set) var steps: [OnboardingPhase]
     @ObservationIgnored var onFinish: (() -> Void)?
     private(set) var isFinished = false
 
@@ -20,16 +23,29 @@ final class OnboardingModel {
     private static let tourKey = "introTourSeen"
 
     /// Açılışta bir kez hesaplanır: `nil` → doğrudan ana pencere.
-    static let launchPhase: OnboardingPhase? = {
-        let missing = !allPermissionsGranted()
-        let snoozed = (UserDefaults.standard.object(forKey: snoozeKey) as? Date ?? .distantPast) > Date()
-        if missing && !snoozed { return .permissions }
-        if !UserDefaults.standard.bool(forKey: tourKey) { return .tour }
-        return nil
-    }()
+    static let launchPhase: OnboardingPhase? = plannedSteps().first
+
+    private static func plannedSteps() -> [OnboardingPhase] {
+        var steps: [OnboardingPhase] = []
+        if !AppLanguage.isChosen { steps.append(.language) }
+        if AppTheme.chosen == nil { steps.append(.theme) }
+        if !UserDefaults.standard.bool(forKey: tourKey) { steps.append(.tour) }
+        // İzinler en son: verilince ya da "Daha Sonra Hatırlat"a basılınca uygulama açılır.
+        // TUNO_SHOW_PERMISSIONS=1: izinler verili olsa da adım gösterilir (yalnızca deneme için).
+        let forced = ProcessInfo.processInfo.environment["TUNO_SHOW_PERMISSIONS"] == "1"
+        if forced || (!allPermissionsGranted() && !snoozed) { steps.append(.permissions) }
+        return steps
+    }
+
+    private static var snoozed: Bool {
+        (UserDefaults.standard.object(forKey: snoozeKey) as? Date ?? .distantPast) > Date()
+    }
 
     init() {
-        phase = Self.launchPhase ?? .permissions
+        let planned = Self.plannedSteps()
+        let initial: [OnboardingPhase] = planned.isEmpty ? [.permissions] : planned
+        steps = initial
+        phase = initial[0]
     }
 
     static func allPermissionsGranted() -> Bool {
@@ -43,45 +59,60 @@ final class OnboardingModel {
         set { UserDefaults.standard.set(newValue, forKey: Self.tourKey) }
     }
 
+    var stepIndex: Int { steps.firstIndex(of: phase) ?? 0 }
+    var canGoBack: Bool { stepIndex > 0 && phase != .language }
+
+    func back() {
+        guard canGoBack else { return }
+        phase = steps[stepIndex - 1]
+    }
+
+    /// Bir sonraki adım; adım kalmadıysa ana pencere.
+    func next() {
+        let index = stepIndex
+        if index + 1 < steps.count { phase = steps[index + 1] } else { finish() }
+    }
+
     /// Ayarlardan izin ekranını yeniden açmak için.
     func showPermissions() {
         isFinished = false
+        steps = [.permissions]
         phase = .permissions
     }
 
     /// Tüm izinler verildi.
     func permissionsCompleted() {
         UserDefaults.standard.removeObject(forKey: Self.snoozeKey)
-        advance()
+        next()
     }
 
     /// "Daha Sonra": izin ekranını 1 gün ertele.
     func later() {
         UserDefaults.standard.set(Date().addingTimeInterval(24 * 60 * 60), forKey: Self.snoozeKey)
-        advance()
+        next()
     }
 
     func finishTour() {
         tourSeen = true
-        finish()
+        next()
     }
 
     /// Pencere başka bir yolla kapatıldıysa (kırmızı düğme) izin ekranını ertele.
     func windowClosed() {
         guard !isFinished else { return }
-        if phase == .tour {
+        switch phase {
+        case .language, .theme:
+            return   // dil/görünüm seçilmeden kapandı: OnboardingRoot pencereyi yeniden açar
+        case .tour:
             tourSeen = true
-        } else {
+        case .permissions:
             UserDefaults.standard.set(Date().addingTimeInterval(24 * 60 * 60), forKey: Self.snoozeKey)
         }
         isFinished = true
     }
 
-    private func advance() {
-        if tourSeen { finish() } else { phase = .tour }
-    }
-
     private func finish() {
+        if steps.contains(.tour) { tourSeen = true }
         isFinished = true
         onFinish?()
     }

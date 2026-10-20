@@ -96,7 +96,7 @@ private struct HUDView: View {
                         .lineLimit(1)
                     Spacer()
                     if let value = model.value {
-                        Text(model.muted ? "Sessiz" : value.percentText)
+                        Text(model.muted ? L("Sessiz") : value.percentText)
                             .font(.system(size: 12).monospacedDigit())
                             .foregroundStyle(model.muted ? Color.secondary : BoostStyle.color(for: value) ?? .secondary)
                             .contentTransition(.numericText())

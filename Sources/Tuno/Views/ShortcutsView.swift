@@ -9,15 +9,16 @@ struct ShortcutsView: View {
         @Bindable var shortcuts = shortcuts
         @Bindable var indicator = indicator
         Form {
+            Section { PageHeader(page: .shortcuts) }
             Section {
                 Toggle(isOn: $indicator.isEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Caps Lock ve klavye dili göstergesi")
-                        Text("Caps Lock açılıp kapanınca ve klavye dili değişince ekranda kısa bir gösterge çıkar.")
+                        Text(L("Caps Lock ve klavye dili göstergesi"))
+                        Text(L("Caps Lock ve klavye dili değişince kısa bir gösterge çıkar."))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Caps Lock ve klavye dili göstergesi")
             }
 
             Section {
@@ -25,9 +26,9 @@ struct ShortcutsView: View {
                     ShortcutRow(shortcut: shortcut)
                 }
             } header: {
-                Text("Genel Kısayollar")
+                Text(L("Genel Kısayollar"))
             } footer: {
-                Text("Kısayollar her uygulamadayken çalışır. \"Öndeki uygulama\", o an kullandığınız uygulamadır (ör. Safari'deyken Safari).")
+                Text(L("Kısayollar her uygulamadayken çalışır. \"Öndeki uygulama\", o an kullandığınız uygulamadır (ör. Safari'deyken Safari)."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -35,29 +36,30 @@ struct ShortcutsView: View {
             Section {
                 Toggle(isOn: $shortcuts.mediaKeysEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Ses tuşlarını yazılımsal ses için kullan")
-                        Text("HDMI ve DisplayPort ekranlarda klavyenin ses tuşları Tuno'nun yazılımsal sesini ayarlar. ⌥⇧ ile ince ayar yapılır.")
+                        Text(L("Ses tuşlarını yazılımsal ses için kullan"))
+                        Text(L("HDMI ve DisplayPort ekranlarda ses tuşları Tuno'nun sesini ayarlar."))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Ses tuşlarını yazılımsal ses için kullan")
 
                 if shortcuts.mediaKeysEnabled && !shortcuts.isAccessibilityTrusted {
                     HStack {
                         NoticeRow(symbol: "lock.fill", color: .orange,
-                                  text: "Ses tuşlarını yakalamak için Erişilebilirlik izni gerekiyor.")
+                                  text: L("Ses tuşlarını yakalamak için Erişilebilirlik izni gerekiyor."))
                         Spacer()
-                        Button("İzin Ver…") { shortcuts.requestAccessibility() }
+                        Button(L("İzin Ver…")) { shortcuts.requestAccessibility() }
                     }
                 } else if shortcuts.mediaKeysEnabled {
                     NoticeRow(symbol: "checkmark.circle.fill", color: .green,
                               text: mixer.defaultUsesSoftwareVolume
-                                ? "Etkin: ses tuşları şu anki aygıtın yazılımsal sesini ayarlıyor."
-                                : "Hazır: donanım sesi olan aygıtlarda ses tuşları her zamanki gibi çalışır.")
+                                ? L("Etkin: ses tuşları şu anki aygıtın yazılımsal sesini ayarlıyor.")
+                                : L("Hazır: donanım sesi olan aygıtlarda ses tuşları her zamanki gibi çalışır."))
                 }
             } header: {
-                Text("Klavye Ses Tuşları")
+                Text(L("Klavye Ses Tuşları"))
             }
+            PageFooter()
         }
         .formStyle(.grouped)
     }

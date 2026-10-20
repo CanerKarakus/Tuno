@@ -44,6 +44,24 @@ struct TunoIcon: View {
     }
 }
 
+/// Tuno simgesindeki dalga, zeminsiz: koyu modda beyaz, açık modda siyah.
+struct TunoWave: View {
+    var height: CGFloat = 20
+
+    private static let heights: [CGFloat] = [44, 130, 206, 106, 163, 68]
+
+    var body: some View {
+        let unit = height / 206
+        HStack(spacing: 12.8 * unit) {
+            ForEach(Array(Self.heights.enumerated()), id: \.offset) { _, bar in
+                Capsule().frame(width: 22 * unit, height: bar * unit)
+            }
+        }
+        .foregroundStyle(.primary)
+        .frame(height: height)
+    }
+}
+
 /// Sol/sağ simgeli ses düzeyi kaydırıcısı.
 struct VolumeSlider: View {
     @Binding var value: Float
@@ -191,7 +209,7 @@ struct CapsuleSlider: View {
         }
         .frame(height: height)
         .accessibilityElement()
-        .accessibilityLabel("Ses düzeyi")
+        .accessibilityLabel(L("Ses düzeyi"))
         .accessibilityValue(value.percentText)
         .accessibilityAdjustableAction { direction in
             let step = span * 0.05
@@ -240,5 +258,24 @@ enum BoostStyle {
         }
         stops.append(.init(color: previous.color, location: 1))
         return stops
+    }
+}
+
+/// Sayfanın başındaki tanıtım kartı (Sistem Ayarları'ndaki Bluetooth, Pil gibi bölmelerin üstü):
+/// büyük renkli simge, başlık ve kısa açıklama. Simge açılışta hafifçe yaylanır.
+struct PageHeader: View {
+    let page: Page
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SettingsIcon(symbol: page.symbol, color: page.tint, size: 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(page.title).font(.title3.weight(.semibold))
+                Text(page.summary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

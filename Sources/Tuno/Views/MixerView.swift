@@ -6,6 +6,7 @@ struct MixerView: View {
 
     var body: some View {
         Form {
+            Section { PageHeader(page: .mixer) }
             Section {
                 MasterVolumeRow()
             }
@@ -13,7 +14,7 @@ struct MixerView: View {
             if let error = mixer.lastError {
                 Section {
                     NoticeRow(symbol: "exclamationmark.triangle.fill", color: .orange, text: error)
-                    Button("Gizlilik Ayarlarını Aç") {
+                    Button(L("Gizlilik Ayarlarını Aç")) {
                         NSWorkspace.shared.open(URL(
                             string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture")!)
                     }
@@ -28,9 +29,9 @@ struct MixerView: View {
                             Image(systemName: "speaker.slash")
                                 .font(.largeTitle)
                                 .foregroundStyle(.tertiary)
-                            Text("Şu anda ses çalan bir uygulama yok")
+                            Text(L("Şu anda ses çalan bir uygulama yok"))
                                 .foregroundStyle(.secondary)
-                            Text("Bir uygulama ses çalmaya başladığında burada görünür.")
+                            Text(L("Bir uygulama ses çalmaya başladığında burada görünür."))
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
@@ -43,12 +44,13 @@ struct MixerView: View {
                     }
                 }
             } header: {
-                Text("Uygulamalar")
+                Text(L("Uygulamalar"))
             } footer: {
-                Text("Her uygulamanın sesini ayrı ayarlayın, sessize alın ya da farklı bir aygıta yönlendirin. %100 üzerindeki değerler sesi yükseltir.")
+                Text(L("%100 üzerindeki değerler sesi yükseltir.")).searchAnchor("%100 üzerindeki değerler sesi yükseltir.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            PageFooter()
         }
         .formStyle(.grouped)
         .onAppear { mixer.setPageVisible(true) }
@@ -78,7 +80,7 @@ struct MasterVolumeRow: View {
                     Color.clear.frame(width: AppVolumeRow.menuWidth, height: 1)
                 }
             } else {
-                Text("Donanım ses denetimi yok")
+                Text(L("Donanım ses denetimi yok"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -87,8 +89,8 @@ struct MasterVolumeRow: View {
                 SettingsIcon(symbol: devices.defaultOutput?.symbolName(for: .output) ?? "hifispeaker.fill",
                              color: .blue, size: 28)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(devices.defaultOutput?.name ?? "Çıkış aygıtı yok").lineLimit(1)
-                    Text(output.isSoftware ? "Yazılımsal ses düzeyi" : "Sistem ses düzeyi")
+                    Text(devices.defaultOutput?.name ?? L("Çıkış aygıtı yok")).lineLimit(1)
+                    Text(output.isSoftware ? L("Yazılımsal ses düzeyi") : L("Sistem ses düzeyi"))
                         .font(.caption)
                         .foregroundStyle(output.isSoftware ? Color.blue : .secondary)
                 }
@@ -118,7 +120,7 @@ struct AppVolumeRow: View {
             }
         }
         .padding(.vertical, 2)
-        .contextMenu { Button("Varsayılana Döndür") { mixer.reset(app) } }
+        .contextMenu { Button(L("Varsayılana Döndür")) { mixer.reset(app) } }
     }
 
     static let menuWidth: CGFloat = 22
@@ -156,7 +158,7 @@ struct AppVolumeRow: View {
 
     private func statusText(_ settings: AppAudioSettings) -> String {
         if let uid = settings.outputUID, let device = devices.device(uid: uid) { return device.name }
-        return app.isPlaying ? "Çalıyor" : "Beklemede"
+        return app.isPlaying ? L("Çalıyor") : L("Beklemede")
     }
 }
 
@@ -169,11 +171,11 @@ struct AppOutputMenu: View {
     var body: some View {
         let settings = mixer.settings(for: app)
         Menu {
-            Picker("Çıkış", selection: Binding(
+            Picker(L("Çıkış"), selection: Binding(
                 get: { settings.outputUID },
                 set: { mixer.setOutput($0, for: app) }
             )) {
-                Text("Sistem Varsayılanı (\(devices.defaultOutput?.name ?? "—"))").tag(String?.none)
+                Text(String(format: L("Sistem Varsayılanı (%@)"), devices.defaultOutput?.name ?? "—")).tag(String?.none)
                 Divider()
                 ForEach(devices.outputDevices) { device in
                     Text(device.name).tag(Optional(device.uid))
@@ -181,14 +183,14 @@ struct AppOutputMenu: View {
             }
             .pickerStyle(.inline)
             Divider()
-            Button("Varsayılana Döndür") { mixer.reset(app) }
+            Button(L("Varsayılana Döndür")) { mixer.reset(app) }
         } label: {
             Image(systemName: settings.outputUID == nil ? "hifispeaker" : "hifispeaker.fill")
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Çıkış aygıtı")
+        .help(L("Çıkış aygıtı"))
     }
 }
 
@@ -203,6 +205,6 @@ struct MuteButton: View {
                 .frame(width: 20)
         }
         .buttonStyle(.borderless)
-        .help(isMuted ? "Sesi Aç" : "Sessize Al")
+        .help(isMuted ? L("Sesi Aç") : L("Sessize Al"))
     }
 }

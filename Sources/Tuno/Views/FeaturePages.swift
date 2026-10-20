@@ -16,13 +16,13 @@ struct DevicePrioritySection: View {
             Toggle(isOn: Binding(get: { rules.isEnabled },
                                  set: { devices.rules.setEnabled($0, scope: scope) })) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Öncelik sırasına göre otomatik geç")
+                    Text(L("Öncelik sırasına göre otomatik geç"))
                     Text(scope == .output
-                         ? "Bir aygıt takıldığında ya da çıkarıldığında listedeki ilk uygun aygıta geçilir."
-                         : "Ör. AirPods mikrofonunu engelleyin: ses kalitesi düşmez, MacBook mikrofonu kullanılır.")
+                         ? L("Bir aygıt takıldığında ya da çıkarıldığında listedeki ilk uygun aygıta geçilir.")
+                         : L("Ör. AirPods mikrofonunu engelleyin: ses kalitesi düşmez, MacBook mikrofonu kullanılır."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
-            }
+            }.searchAnchor("Öncelik sırasına göre otomatik geç")
             if rules.isEnabled {
                 ForEach(Array(rules.order.enumerated()), id: \.element.uid) { index, device in
                     PriorityRow(device: device, rank: index + 1, isPresent: present.contains(device.uid),
@@ -31,10 +31,10 @@ struct DevicePrioritySection: View {
                 }
             }
         } header: {
-            Text("Otomatik Geçiş")
+            Text(L("Otomatik Geçiş"))
         } footer: {
             if rules.isEnabled {
-                Text("Engellenen aygıta macOS kendiliğinden geçerse Tuno geri alır. Bir aygıtı Tuno'dan elle seçerseniz, bir sonraki takma/çıkarmaya kadar seçiminize dokunulmaz.")
+                Text(L("Engellenen aygıta macOS geçerse Tuno geri alır."))
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -62,7 +62,7 @@ private struct PriorityRow: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 1) {
                 Text(device.name).strikethrough(isBlocked, color: .secondary)
-                Text(isPresent ? device.transport : "\(device.transport) · bağlı değil")
+                Text(isPresent ? device.transport : String(format: L("%@ · bağlı değil"), device.transport))
                     .font(.caption).foregroundStyle(.secondary)
             }
             .opacity(isPresent ? 1 : 0.55)
@@ -74,14 +74,14 @@ private struct PriorityRow: View {
                     .foregroundStyle(isBlocked ? Color.red : .secondary)
             }
             .buttonStyle(.borderless)
-            .help(isBlocked ? "Engeli kaldır" : "Asla otomatik seçme")
+            .help(isBlocked ? L("Engeli kaldır") : L("Asla otomatik seçme"))
             Button { devices.rules.move(device.uid, by: -1, scope: scope) } label: { Image(systemName: "chevron.up") }
-                .buttonStyle(.borderless).disabled(isFirst).help("Yukarı taşı")
+                .buttonStyle(.borderless).disabled(isFirst).help(L("Yukarı taşı"))
             Button { devices.rules.move(device.uid, by: 1, scope: scope) } label: { Image(systemName: "chevron.down") }
-                .buttonStyle(.borderless).disabled(isLast).help("Aşağı taşı")
+                .buttonStyle(.borderless).disabled(isLast).help(L("Aşağı taşı"))
             if !isPresent {
                 Button { devices.rules.forget(device.uid, scope: scope) } label: { Image(systemName: "trash") }
-                    .buttonStyle(.borderless).help("Listeden kaldır")
+                    .buttonStyle(.borderless).help(L("Listeden kaldır"))
             }
         }
     }
@@ -96,19 +96,20 @@ struct DisplaysView: View {
     var body: some View {
         @Bindable var displays = displays
         Form {
+            Section { PageHeader(page: .displays) }
             if displays.displays.isEmpty {
                 Section {
                     VStack(spacing: 8) {
                         Image(systemName: "display").font(.largeTitle).foregroundStyle(.tertiary)
-                        Text("Bağlı harici ekran yok").foregroundStyle(.secondary)
-                        Text("Bir monitör bağladığınızda parlaklığını buradan ve klavyeden ayarlayabilirsiniz.")
+                        Text(L("Bağlı harici ekran yok")).foregroundStyle(.secondary)
+                        Text(L("Bir monitör bağladığınızda parlaklığını buradan ve klavyeden ayarlayabilirsiniz."))
                             .font(.caption).foregroundStyle(.tertiary).multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
                 }
             } else {
-                Section("Parlaklık") {
+                Section(L("Parlaklık")) {
                     ForEach(displays.displays) { display in
                         LabeledContent {
                             HStack {
@@ -124,14 +125,14 @@ struct DisplaysView: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(display.name)
-                                Text(display.supportsDDC ? "Donanımsal (DDC)" : "Yazılımsal karartma")
+                                Text(display.supportsDDC ? L("Donanımsal (DDC)") : L("Yazılımsal karartma"))
                                     .font(.caption)
                                     .foregroundStyle(display.supportsDDC ? Color.green : .orange)
                             }
                         }
                     }
                 }
-                Section("Çözünürlük") {
+                Section(L("Çözünürlük")) {
                     ForEach(displays.displays) { display in
                         LabeledContent(display.name) { ResolutionMenu(displayID: display.id) }
                     }
@@ -141,23 +142,24 @@ struct DisplaysView: View {
             Section {
                 Toggle(isOn: $displays.brightnessKeysEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Parlaklık tuşları harici ekranı ayarlasın")
-                        Text("İmleç hangi ekrandaysa parlaklık tuşları onu ayarlar; dahili ekranda her zamanki gibi çalışır. ⌥⇧ ile ince ayar.")
+                        Text(L("Parlaklık tuşları harici ekranı ayarlasın"))
+                        Text(L("Parlaklık tuşları imlecin bulunduğu ekranı ayarlar. ⌥⇧ ile ince ayar."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Parlaklık tuşları harici ekranı ayarlasın")
                 if displays.brightnessKeysEnabled && !shortcuts.isAccessibilityTrusted {
                     HStack {
                         NoticeRow(symbol: "lock.fill", color: .orange,
-                                  text: "Parlaklık tuşlarını yakalamak için Erişilebilirlik izni gerekiyor.")
+                                  text: L("Parlaklık tuşlarını yakalamak için Erişilebilirlik izni gerekiyor."))
                         Spacer()
-                        Button("İzin Ver…") { shortcuts.requestAccessibility() }
+                        Button(L("İzin Ver…")) { shortcuts.requestAccessibility() }
                     }
                 }
             } footer: {
-                Text("Donanımsal ayar monitörün kendi parlaklığını değiştirir (Apple Silicon, DDC/CI destekleyen monitörler). Desteklemeyen ekranlar ve bazı HDMI bağlantıları yazılımsal olarak karartılır.")
+                Text(L("Donanımsal ayar monitörün kendi parlaklığını değiştirir (DDC/CI). Desteklemeyen ekranlar yazılımsal karartılır."))
                     .font(.caption).foregroundStyle(.secondary)
             }
+            PageFooter()
         }
         .formStyle(.grouped)
         .onAppear { displays.refresh() }
@@ -184,31 +186,32 @@ struct WindowsView: View {
         @Bindable var snapper = snapper
         @Bindable var closeQuitter = closeQuitter
         Form {
+            Section { PageHeader(page: .windows) }
             if !available {
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 10) {
                             Image(systemName: "rectangle.dashed.badge.record").font(.title2).foregroundStyle(.orange)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Pencere özellikleri için izin gerekiyor").font(.headline)
-                                Text("Alt-Tab ve Dock önizlemesi, Ekran Kaydı ve Erişilebilirlik izni verilmeden çalışmaz.")
+                                Text(L("Pencere özellikleri için izin gerekiyor")).font(.headline)
+                                Text(L("Alt-Tab ve Dock önizlemesi, Ekran Kaydı ve Erişilebilirlik izni verilmeden çalışmaz."))
                                     .font(.callout).foregroundStyle(.secondary)
                             }
                         }
                         HStack {
                             ForEach([PermissionKind.screenRecording, .accessibility]) { kind in
                                 if permissions.status(kind) != .granted {
-                                    Button("\(kind.title) İzni Ver…") { Task { await permissions.request(kind) } }
+                                    Button(String(format: L("%@ İzni Ver…"), kind.title)) { Task { await permissions.request(kind) } }
                                 }
                             }
                             Spacer()
                             if permissions.screenRecordingNeedsRestart {
-                                Button("Tuno'yu Yeniden Başlat") { permissions.relaunch() }
+                                Button(L("Tuno'yu Yeniden Başlat")) { permissions.relaunch() }
                                     .buttonStyle(.borderedProminent)
                             }
                         }
                         if permissions.screenRecordingNeedsRestart {
-                            Text("Ekran Kaydı izni, verildikten sonra Tuno yeniden başlatılınca etkinleşir.")
+                            Text(L("Ekran Kaydı izni, verildikten sonra Tuno yeniden başlatılınca etkinleşir."))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
@@ -220,12 +223,12 @@ struct WindowsView: View {
                 Toggle(isOn: Binding(get: { shortcuts.isEnabled(.switchWindows) },
                                      set: { shortcuts.setEnabled($0, for: .switchWindows) })) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Pencereler arasında geçiş (Alt-Tab)")
-                        Text("⌘ basılıyken ⇥ ile pencereler arasında gezinin, ⌘'yi bırakınca seçilen pencere öne gelir. ⇧ geri, Esc iptal. Yazmaya başlayınca pencereler süzülür, ↩ ile seçilir.")
+                        Text(L("Pencereler arasında geçiş (Alt-Tab)"))
+                        Text(L("⌘⇥ ile pencereler arasında gezinin, ⌘'yi bırakınca seçilen öne gelir. Yazarak süzün."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
-                Toggle("Pencere önizlemelerini göster", isOn: $thumbnails)
+                }.searchAnchor("Pencereler arasında geçiş (Alt-Tab)")
+                Toggle(L("Pencere önizlemelerini göster"), isOn: $thumbnails).searchAnchor("Pencere önizlemelerini göster")
                     .disabled(!shortcuts.isEnabled(.switchWindows))
             } header: {
                 Text("Alt-Tab")
@@ -235,11 +238,11 @@ struct WindowsView: View {
             Section {
                 Toggle(isOn: $dock.isEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Dock'ta pencere önizlemesi")
-                        Text("İmleç Dock'taki bir uygulamanın üzerinde beklerken açık pencereleri gösterilir; tıklayınca o pencere öne gelir.")
+                        Text(L("Dock'ta pencere önizlemesi"))
+                        Text(L("Dock'ta bir uygulamanın üzerinde bekleyince pencereleri gösterilir."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Dock'ta pencere önizlemesi")
             } header: {
                 Text("Dock")
             }
@@ -248,22 +251,22 @@ struct WindowsView: View {
             Section {
                 Toggle(isOn: $snapper.isEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Kenara sürükleyerek yerleştir")
-                        Text("Pencereyi ekranın sol ya da sağ kenarına sürükleyince yarım, köşesine sürükleyince çeyrek, üst kenarına sürükleyince tam ekrana yerleşir. Açıkken macOS'un kendi kenar döşemesi kapatılır.")
+                        Text(L("Kenara sürükleyerek yerleştir"))
+                        Text(L("Kenara sürükleyince yarım, köşeye çeyrek, üste tam ekran yerleşir."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Kenara sürükleyerek yerleştir")
                 Toggle(isOn: $snapper.doubleClickMaximize) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Başlığa çift tıklayınca ekranı kapla")
-                        Text("Tekrar çift tıklayınca pencere eski boyutuna döner.")
+                        Text(L("Başlığa çift tıklayınca ekranı kapla"))
+                        Text(L("Tekrar çift tıklayınca pencere eski boyutuna döner."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Başlığa çift tıklayınca ekranı kapla")
             } header: {
-                Text("Yerleştirme")
+                Text(L("Yerleştirme"))
             } footer: {
-                Text("Kısayollar ⌃⌥⌘ ile: ← → yarım, ↑ tam ekran, ↓ ortala, ⇧↑ ⇧↓ üst ve alt yarı, D F G üçte bir, E T üçte iki. Tümü Klavye Kısayolları sayfasında.")
+                Text(L("⌃⌥⌘ ile ← → yarım, ↑ tam ekran, ↓ ortala. Tümü Klavye Kısayolları'nda."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             .disabled(permissions.status(.accessibility) != .granted)
@@ -271,15 +274,16 @@ struct WindowsView: View {
             Section {
                 Toggle(isOn: $closeQuitter.isEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Son pencere kapanınca uygulamayı kapat")
-                        Text("Kırmızı düğmeyle bir uygulamanın son penceresi kapatılınca uygulama da tamamen kapanır. Finder hariç.")
+                        Text(L("Son pencere kapanınca uygulamayı kapat"))
+                        Text(L("Son pencere kapanınca uygulama da kapanır (Finder hariç)."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Son pencere kapanınca uygulamayı kapat")
             } header: {
-                Text("Kapatma")
+                Text(L("Kapatma"))
             }
             .disabled(permissions.status(.accessibility) != .granted)
+            PageFooter()
         }
         .formStyle(.grouped)
         .onAppear { permissions.refresh() }
@@ -296,42 +300,44 @@ struct ClipboardSettingsView: View {
     var body: some View {
         @Bindable var clipboard = clipboard
         Form {
+            Section { PageHeader(page: .clipboard) }
             Section {
                 Toggle(isOn: $clipboard.isEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Pano geçmişini kaydet")
-                        Text("Kopyaladığınız metin, görsel ve dosyalar saklanır. Parola yöneticilerinin gizli işaretlediği içerikler kaydedilmez.")
+                        Text(L("Pano geçmişini kaydet"))
+                        Text(L("Parola yöneticilerinin gizli işaretlediği içerikler kaydedilmez."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Pano geçmişini kaydet")
                 Toggle(isOn: Binding(get: { shortcuts.isEnabled(.clipboardHistory) },
                                      set: { shortcuts.setEnabled($0, for: .clipboardHistory) })) {
                     HStack {
-                        Text("⌘⇧V ile göster")
+                        Text(L("⌘⇧V ile göster"))
                         Spacer()
                     }
-                }
+                }.searchAnchor("⌘⇧V ile göster")
                 .disabled(!clipboard.isEnabled)
-                Picker("Saklanacak öğe sayısı", selection: $clipboard.limit) {
+                Picker(L("Saklanacak öğe sayısı"), selection: $clipboard.limit) {
                     ForEach([25, 50, 100, 200], id: \.self) { Text("\($0)").tag($0) }
-                }
+                }.searchAnchor("Saklanacak öğe sayısı")
                 .disabled(!clipboard.isEnabled)
             } footer: {
-                Text("⌘⇧V'ye basınca menü çubuğundaki Tuno paneli geçmişle açılır: yazarak arayın, ↑↓ ile seçin, ↩ ile yapıştırın. Metin ve dosya kayıtları bu Mac'te saklanır; görseller yalnızca Tuno açıkken tutulur.")
+                Text(L("⌘⇧V ile geçmişi açın, yazarak arayın, ↩ ile yapıştırın. Görseller yalnızca Tuno açıkken tutulur."))
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             Section {
-                LabeledContent("Kayıtlı öğe") { Text("\(clipboard.items.count)").foregroundStyle(.secondary) }
-                LabeledContent("Geçmiş") {
-                    Button("Temizle…", role: .destructive) { confirmClear = true }
+                LabeledContent(L("Kayıtlı öğe")) { Text("\(clipboard.items.count)").foregroundStyle(.secondary) }
+                LabeledContent(L("Geçmiş")) {
+                    Button(L("Temizle…"), role: .destructive) { confirmClear = true }
                         .disabled(clipboard.items.isEmpty)
                 }
             }
+            PageFooter()
         }
         .formStyle(.grouped)
-        .confirmationDialog("Pano geçmişi silinsin mi?", isPresented: $confirmClear) {
-            Button("Sil", role: .destructive) { clipboard.clear() }
+        .confirmationDialog(L("Pano geçmişi silinsin mi?"), isPresented: $confirmClear) {
+            Button(L("Sil"), role: .destructive) { clipboard.clear() }
         }
     }
 }
@@ -345,40 +351,42 @@ struct FinderView: View {
     var body: some View {
         @Bindable var finder = finder
         Form {
+            Section { PageHeader(page: .finder) }
             if permissions.status(.accessibility) != .granted {
                 Section {
                     HStack {
                         NoticeRow(symbol: "lock.fill", color: .orange,
-                                  text: "Finder kısayolları için Erişilebilirlik izni gerekiyor.")
+                                  text: L("Finder kısayolları için Erişilebilirlik izni gerekiyor."))
                         Spacer()
-                        Button("İzin Ver…") { Task { await permissions.request(.accessibility) } }
+                        Button(L("İzin Ver…")) { Task { await permissions.request(.accessibility) } }
                     }
                 }
             }
             Section {
                 Toggle(isOn: $finder.isEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("⌘X ile kes, ⌘V ile taşı")
-                        Text("Kesilen dosyalar yapıştırıldıkları yere taşınır. Dosya adı düzenlenirken metin için her zamanki gibi çalışır.")
+                        Text(L("⌘X ile kes, ⌘V ile taşı"))
+                        Text(L("Kesilen dosyalar yapıştırıldıkları yere taşınır."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("⌘X ile kes, ⌘V ile taşı")
                 Toggle(isOn: $finder.deleteToTrash) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Delete ile çöpe at")
-                        Text("Klavyedeki Delete (ya da fn ⌫) seçili dosyaları çöpe atar.")
+                        Text(L("Delete ile çöpe at"))
+                        Text(L("Klavyedeki Delete (ya da fn ⌫) seçili dosyaları çöpe atar."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Delete ile çöpe at")
                 Toggle(isOn: $finder.enterOpens) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Enter ile aç, F2 ile yeniden adlandır")
-                        Text("Enter seçili dosyayı ya da klasörü açar. Ad düzenlenirken ve iletişim kutularında Enter her zamanki gibi çalışır.")
+                        Text(L("Enter ile aç, F2 ile yeniden adlandır"))
+                        Text(L("Enter seçili öğeyi açar; ad düzenlenirken her zamanki gibi çalışır."))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                }
+                }.searchAnchor("Enter ile aç, F2 ile yeniden adlandır")
             }
             .disabled(permissions.status(.accessibility) != .granted)
+            PageFooter()
         }
         .formStyle(.grouped)
     }

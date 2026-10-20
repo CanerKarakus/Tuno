@@ -42,7 +42,7 @@ enum SettingsBackup {
             let id = url.deletingPathExtension().lastPathComponent
             guard id.range(of: #"^\d{8}-\d{6}$"#, options: .regularExpression) != nil,
                   let date = idFormatter.date(from: id) else { return nil }
-            let reason = (NSDictionary(contentsOf: url)?["_reason"] as? String) ?? "Günlük yedek"
+            let reason = L((NSDictionary(contentsOf: url)?["_reason"] as? String) ?? "Günlük yedek")
             return Item(id: id, date: date, reason: reason)
         }.sorted { $0.date > $1.date }
     }

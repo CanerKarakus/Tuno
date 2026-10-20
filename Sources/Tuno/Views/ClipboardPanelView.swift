@@ -55,15 +55,15 @@ struct ClipboardPanelView: View {
                     .background(Color.primary.opacity(0.08), in: Circle())
             }
             .buttonStyle(.plain)
-            .help("Miksere dön")
+            .help(L("Miksere dön"))
 
             VStack(alignment: .leading, spacing: 0) {
-                Text("Pano Geçmişi").font(.headline)
-                Text("\(clipboard.items.count) öğe").font(.caption).foregroundStyle(.secondary)
+                Text(L("Pano Geçmişi")).font(.headline)
+                Text(String(format: L("%d öğe"), clipboard.items.count)).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             if !clipboard.items.isEmpty {
-                Button("Temizle") { clipboard.clear() }
+                Button(L("Temizle")) { clipboard.clear() }
                     .buttonStyle(.plain)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
@@ -75,7 +75,7 @@ struct ClipboardPanelView: View {
     private var searchField: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Ara", text: $query)
+            TextField(L("Ara"), text: $query)
                 .textFieldStyle(.plain)
                 .focused($searchFocused)
                 .onSubmit { pasteSelected() }
@@ -93,7 +93,7 @@ struct ClipboardPanelView: View {
         if items.isEmpty {
             VStack(spacing: 6) {
                 Image(systemName: "doc.on.clipboard").font(.title2).foregroundStyle(.tertiary)
-                Text(clipboard.items.isEmpty ? "Henüz bir şey kopyalanmadı" : "Sonuç yok")
+                Text(clipboard.items.isEmpty ? L("Henüz bir şey kopyalanmadı") : L("Sonuç yok"))
                     .font(.caption).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
@@ -123,9 +123,9 @@ struct ClipboardPanelView: View {
 
     private var hint: some View {
         HStack(spacing: 12) {
-            Label("Seç", systemImage: "arrow.up.arrow.down")
-            Label("Yapıştır", systemImage: "return")
-            Label("Kapat", systemImage: "escape")
+            Label(L("Seç"), systemImage: "arrow.up.arrow.down")
+            Label(L("Yapıştır"), systemImage: "return")
+            Label(L("Kapat"), systemImage: "escape")
         }
         .font(.system(size: 10))
         .foregroundStyle(.tertiary)
@@ -183,7 +183,7 @@ private struct ClipRow: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Geçmişten sil")
+                .help(L("Geçmişten sil"))
             }
         }
         .padding(.horizontal, 8)
@@ -220,9 +220,9 @@ private struct ClipRow: View {
     private var title: String {
         switch item.content {
         case .text(let text): text.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .image(let image): "Görsel · \(Int(image.size.width))×\(Int(image.size.height))"
+        case .image(let image): String(format: L("Görsel · %d×%d"), Int(image.size.width), Int(image.size.height))
         case .files(let urls):
-            urls.count == 1 ? urls[0].lastPathComponent : "\(urls[0].lastPathComponent) ve \(urls.count - 1) dosya daha"
+            urls.count == 1 ? urls[0].lastPathComponent : String(format: L("%@ ve %d dosya daha"), urls[0].lastPathComponent, urls.count - 1)
         }
     }
 

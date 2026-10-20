@@ -6,15 +6,15 @@ import ServiceManagement
 /// kullanıcı adı ya da ev klasörünün yolu eklenmez.
 @MainActor
 enum Diagnostics {
-    static let summary = "Sistem bilgisi (macOS, Mac modeli), izinlerin durumu, ses aygıtları ve ekranlar, Tuno ayarları, "
-        + "Tuno'nun son günlük kayıtları ve son çökmelerin listesi. Pano içeriği, kişisel dosyaların ve adın eklenmez."
+    static var summary: String { L("Sistem bilgisi (macOS, Mac modeli), izinlerin durumu, ses aygıtları ve ekranlar, Tuno ayarları, "
+        + "Tuno'nun son günlük kayıtları ve son çökmelerin listesi. Pano içeriği, kişisel dosyaların ve adın eklenmez.") }
 
     static func confirm() -> Bool {
         let alert = NSAlert()
-        alert.messageText = "Tuno Destek bir tanılama paketi istiyor"
-        alert.informativeText = "Pakette şunlar yer alır: \(summary)\n\nGöndermek istiyor musun?"
-        alert.addButton(withTitle: "Gönder")
-        alert.addButton(withTitle: "Gönderme")
+        alert.messageText = L("Tuno Destek bir tanılama paketi istiyor")
+        alert.informativeText = String(format: L("Pakette şunlar yer alır: %@\n\nGöndermek istiyor musun?"), summary)
+        alert.addButton(withTitle: L("Gönder"))
+        alert.addButton(withTitle: L("Gönderme"))
         alert.icon = NSApp.applicationIconImage
         NSApp.activate()
         return alert.runModal() == .alertFirstButtonReturn

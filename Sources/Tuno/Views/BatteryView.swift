@@ -6,12 +6,13 @@ struct BatteryView: View {
 
     var body: some View {
         Form {
+            Section { PageHeader(page: .battery) }
             if let info = battery.info {
                 Section {
                     HStack(spacing: 16) {
                         BatteryGauge(percent: info.percent, isCharging: info.isCharging)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("%\(info.percent)")
+                            Text(String(format: L("%%%d"), info.percent))
                                 .font(.system(size: 30, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
                                 .contentTransition(.numericText())
@@ -22,34 +23,35 @@ struct BatteryView: View {
                     .padding(.vertical, 6)
                 }
 
-                Section("Pil Sağlığı") {
+                Section(L("Pil Sağlığı")) {
                     if let health = info.health {
-                        MeterRow(title: "Azami kapasite", value: health,
+                        MeterRow(title: L("Azami kapasite"), value: health,
                                  text: health.formatted(.percent.precision(.fractionLength(0))),
                                  color: health >= 0.8 ? .green : .orange)
                     }
                     if let cycles = info.cycleCount {
                         let limit = info.designCycleCount ?? 1000
-                        MeterRow(title: "Şarj döngüsü", value: Double(cycles) / Double(max(limit, 1)),
+                        MeterRow(title: L("Şarj döngüsü"), value: Double(cycles) / Double(max(limit, 1)),
                                  text: "\(cycles) / \(limit)", color: cycles < limit * 8 / 10 ? .blue : .orange)
                     }
                     if let full = info.fullCapacity, let design = info.designCapacity {
-                        LabeledContent("Tam kapasite", value: "\(full) mAh")
-                        LabeledContent("Tasarım kapasitesi", value: "\(design) mAh")
+                        LabeledContent(L("Tam kapasite"), value: "\(full) mAh")
+                        LabeledContent(L("Tasarım kapasitesi"), value: "\(design) mAh")
                     }
                 }
 
-                Section("Güç") {
-                    LabeledContent("Güç kaynağı", value: info.isPluggedIn ? "Güç adaptörü" : "Pil")
+                Section(L("Güç")) {
+                    LabeledContent(L("Güç kaynağı"), value: info.isPluggedIn ? L("Güç adaptörü") : L("Pil"))
                     if info.isPluggedIn, let watts = info.adapterWatts {
-                        LabeledContent("Adaptör gücü", value: "\(watts) W")
+                        LabeledContent(L("Adaptör gücü"), value: "\(watts) W")
                     }
                 }
             } else {
                 Section {
-                    Text("Bu Mac'te pil yok.").foregroundStyle(.secondary)
+                    Text(L("Bu Mac'te pil yok.")).foregroundStyle(.secondary)
                 }
             }
+            PageFooter()
         }
         .formStyle(.grouped)
         .animation(.snappy, value: battery.info)
@@ -58,18 +60,18 @@ struct BatteryView: View {
     }
 
     private func status(_ info: MacBattery.Info) -> String {
-        if info.isPluggedIn && (info.isFullyCharged || info.percent >= 100) { return "Tam dolu" }
+        if info.isPluggedIn && (info.isFullyCharged || info.percent >= 100) { return L("Tam dolu") }
         if info.isCharging {
-            return info.minutesRemaining.map { "Şarj oluyor · tam dolmasına \(Self.duration($0))" } ?? "Şarj oluyor"
+            return info.minutesRemaining.map { String(format: L("Şarj oluyor · tam dolmasına %@"), Self.duration($0)) } ?? L("Şarj oluyor")
         }
-        if info.isPluggedIn { return "Adaptöre bağlı, şarj olmuyor" }
-        return info.minutesRemaining.map { "Pilde · yaklaşık \(Self.duration($0)) kaldı" } ?? "Pilde · süre hesaplanıyor"
+        if info.isPluggedIn { return L("Adaptöre bağlı, şarj olmuyor") }
+        return info.minutesRemaining.map { String(format: L("Pilde · yaklaşık %@ kaldı"), Self.duration($0)) } ?? L("Pilde · süre hesaplanıyor")
     }
 
     private static func duration(_ minutes: Int) -> String {
         let hours = minutes / 60, rest = minutes % 60
-        if hours == 0 { return "\(rest) dk" }
-        return rest == 0 ? "\(hours) sa" : "\(hours) sa \(rest) dk"
+        if hours == 0 { return String(format: L("%d dk"), rest) }
+        return rest == 0 ? String(format: L("%d sa"), hours) : String(format: L("%d sa %d dk"), hours, rest)
     }
 }
 

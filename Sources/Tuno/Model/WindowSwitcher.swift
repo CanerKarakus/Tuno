@@ -284,7 +284,7 @@ private struct SwitcherView: View {
                     Text(model.query).font(.system(size: 15, weight: .medium))
                     Spacer()
                     if windows.isEmpty {
-                        Text("Pencere yok").font(.system(size: 12)).foregroundStyle(.secondary)
+                        Text(L("Pencere yok")).font(.system(size: 12)).foregroundStyle(.secondary)
                     }
                 }
                 .padding(.horizontal, 6)
@@ -382,8 +382,8 @@ struct WindowCard: View {
         .overlay(alignment: .topTrailing) {
             if hovering, onClose != nil || onMinimize != nil {
                 HStack(spacing: 4) {
-                    if let onMinimize { CardButton(symbol: "minus", help: "Küçült", action: onMinimize) }
-                    if let onClose { CardButton(symbol: "xmark", help: "Kapat", action: onClose) }
+                    if let onMinimize { CardButton(symbol: "minus", help: L("Küçült"), action: onMinimize) }
+                    if let onClose { CardButton(symbol: "xmark", help: L("Kapat"), action: onClose) }
                 }
                 .padding(6)
                 .transition(.opacity)

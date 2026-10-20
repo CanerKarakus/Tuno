@@ -54,7 +54,7 @@ final class DisplayController {
         }
         let saved = UserDefaults.standard.dictionary(forKey: Self.levelsKey) as? [String: Double] ?? [:]
         displays = ids.map { id in
-            let name = Self.screen(id)?.localizedName ?? "Harici Ekran"
+            let name = Self.screen(id)?.localizedName ?? L("Harici Ekran")
             return ExternalDisplay(id: id, name: name, supportsDDC: services[id] != nil,
                                    brightness: previous.first { $0.id == id }?.brightness ?? saved[Self.key(id)] ?? 1)
         }
@@ -202,7 +202,7 @@ struct DisplayModeOption: Identifiable, Hashable {
     var height: Int { mode.height }
     var isHiDPI: Bool { mode.pixelWidth > mode.width }
     var id: String { "\(width)x\(height)-\(isHiDPI)" }
-    var title: String { "\(width) × \(height)" + (isHiDPI ? " (keskin)" : "") }
+    var title: String { "\(width) × \(height)" + (isHiDPI ? " " + L("(keskin)") : "") }
 
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }

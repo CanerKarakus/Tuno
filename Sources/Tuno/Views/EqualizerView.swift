@@ -9,35 +9,36 @@ struct EqualizerView: View {
     var body: some View {
         @Bindable var equalizer = equalizer
         Form {
+            Section { PageHeader(page: .equalizer) }
             Section {
                 HStack(spacing: 12) {
                     SettingsIcon(symbol: "slider.vertical.3", color: .purple, size: 32)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Ekolayzer")
-                        Text("Tüm uygulamaların sesine uygulanır")
+                        Text(L("Ekolayzer"))
+                        Text(L("Tüm uygulamaların sesine uygulanır"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Toggle("Ekolayzer", isOn: $equalizer.isEnabled)
+                    Toggle(L("Ekolayzer"), isOn: $equalizer.isEnabled).searchAnchor("Ekolayzer")
                         .labelsHidden()
                         .toggleStyle(.switch)
                 }
                 .padding(.vertical, 2)
 
-                LabeledContent("Hazır Ayar") {
+                LabeledContent(L("Hazır Ayar")) {
                     HStack(spacing: 8) {
                         PresetMenu()
-                        Button("Farklı Kaydet…") {
+                        Button(L("Farklı Kaydet…")) {
                             savingName = ""
                             isSaving = true
                         }
-                        Button("Sıfırla") { equalizer.reset() }
+                        Button(L("Sıfırla")) { equalizer.reset() }
                         if let preset = equalizer.preset(id: equalizer.presetID), !preset.isBuiltIn {
                             Button(role: .destructive) { equalizer.delete(preset) } label: {
                                 Image(systemName: "trash")
                             }
-                            .help("Hazır ayarı sil")
+                            .help(L("Hazır ayarı sil"))
                         }
                     }
                 }
@@ -48,7 +49,7 @@ struct EqualizerView: View {
                     .opacity(equalizer.isEnabled ? 1 : 0.45)
                     .padding(.vertical, 6)
             } footer: {
-                Text("Bantları sürükleyin; sıfırlamak için çift tıklayın. Yüksek kazançlarda kırpılmayı önlemek için ön kazancı düşürebilirsiniz.")
+                Text(L("Bantları sürükleyin, sıfırlamak için çift tıklayın."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -58,23 +59,24 @@ struct EqualizerView: View {
                     DeviceProfileRow(device: device)
                 }
             } header: {
-                Text("Aygıt Profilleri")
+                Text(L("Aygıt Profilleri"))
             } footer: {
-                Text("Bir aygıta özel ayar seçerseniz o aygıta geçtiğinizde otomatik uygulanır. Ör. kulaklıkta Bas Güçlendirici, hoparlörde Düz.")
+                Text(L("Aygıta özel ayar, o aygıta geçince otomatik uygulanır."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            PageFooter()
         }
         .formStyle(.grouped)
-        .alert("Hazır ayarı kaydet", isPresented: $isSaving) {
-            TextField("Ad", text: $savingName)
-            Button("Kaydet") {
+        .alert(L("Hazır ayarı kaydet"), isPresented: $isSaving) {
+            TextField(L("Ad"), text: $savingName)
+            Button(L("Kaydet")) {
                 let name = savingName.trimmingCharacters(in: .whitespaces)
                 if !name.isEmpty { equalizer.saveCurrent(as: name) }
             }
-            Button("Vazgeç", role: .cancel) {}
+            Button(L("Vazgeç"), role: .cancel) {}
         } message: {
-            Text("Geçerli bant ayarları yeni bir hazır ayar olarak kaydedilir.")
+            Text(L("Geçerli bant ayarları yeni bir hazır ayar olarak kaydedilir."))
         }
     }
 }
@@ -88,7 +90,7 @@ private struct PresetMenu: View {
                 presetButton(preset)
             }
             if !equalizer.userPresets.isEmpty {
-                Section("Benim Ayarlarım") {
+                Section(L("Benim Ayarlarım")) {
                     ForEach(equalizer.userPresets) { preset in
                         presetButton(preset)
                     }
@@ -120,8 +122,8 @@ private struct DeviceProfileRow: View {
             get: { equalizer.profile(for: device.uid) },
             set: { equalizer.setProfile($0, for: device.uid) }
         )) {
-            Text("Genel ayarı kullan").tag(DeviceEQProfile.global)
-            Text("Kapalı").tag(DeviceEQProfile.off)
+            Text(L("Genel ayarı kullan")).tag(DeviceEQProfile.global)
+            Text(L("Kapalı")).tag(DeviceEQProfile.off)
             Divider()
             ForEach(equalizer.allPresets) { preset in
                 Text(preset.name).tag(DeviceEQProfile.preset(preset.id))
@@ -151,7 +153,7 @@ private struct EQPanel: View {
                     value: Binding(get: { equalizer.preamp }, set: { equalizer.preamp = $0.rounded(toPlaces: 1) }),
                     tint: .secondary)
                     .frame(width: 26)
-                Text("Ön").font(.caption2).foregroundStyle(.secondary)
+                Text(L("Ön")).font(.caption2).foregroundStyle(.secondary)
             }
             .frame(height: 230)
 

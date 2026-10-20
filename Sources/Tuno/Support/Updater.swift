@@ -25,7 +25,7 @@ final class Updater {
 
     var version: String {
         let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "geliştirme"
+        let short = info?["CFBundleShortVersionString"] as? String ?? L("geliştirme")
         let build = info?["CFBundleVersion"] as? String ?? "0"
         return "\(short) (\(build))"
     }
@@ -38,6 +38,7 @@ final class Updater {
             controller = nil
             return
         }
+        Milestones.prepare()
         controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: delegate, userDriverDelegate: nil)
         canCheck = controller?.updater.canCheckForUpdates ?? false
         observation = controller?.updater.observe(\.canCheckForUpdates, options: [.new]) { [weak self] updater, _ in
@@ -98,7 +99,10 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
             ["key": "model", "value": SystemInfo.model, "displayKey": "Mac", "displayValue": SystemInfo.model],
             ["key": "arch", "value": SystemInfo.architecture, "displayKey": "İşlemci", "displayValue": SystemInfo.architecture],
             ["key": "id", "value": InstallID.value, "displayKey": "Kurulum", "displayValue": InstallID.value],
-        ]
+            // Seçilen arayüz dili ve görünüm (yönetim panelinde dağılım; seçilmediyse gönderilmez).
+            ["key": "lang", "value": AppLanguage.chosen?.rawValue ?? "", "displayKey": "Dil", "displayValue": AppLanguage.chosen?.rawValue ?? ""],
+            ["key": "theme", "value": AppTheme.chosen?.rawValue ?? "", "displayKey": "Görünüm", "displayValue": AppTheme.chosen?.rawValue ?? ""],
+        ].filter { !($0["value"] ?? "").isEmpty }
         // Dönüşüm hunisi için iki tek seferlik işaret: ilk denetim ve kurulumdan bir hafta sonraki ilk denetim.
         sentMilestone = Milestones.pending()
         if let milestone = sentMilestone {
@@ -162,14 +166,20 @@ enum Milestones {
 
     /// Bu denetimle gönderilecek işaret: "first", "week" ya da yok. Gönderilmiş sayılması için denetimin
     /// başarılı olması gerekir (markSent); ağ hatasında bir sonraki denetimde yeniden gider.
+    /// Açılışta, Sparkle başlamadan önce çağrılır. Sparkle ilk açılışta hiç denetim yapmadan SULastCheckTime yazar;
+    /// kurulum tarihi denetim sırasında belirlenseydi her yeni kurulum eski kurulum sayılır, "first" hiç gitmezdi.
+    static func prepare() {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: installKey) == nil else { return }
+        // Sparkle daha önce çalıştıysa bu Mac'te Tuno zaten kuruluydu: yeni kurulum sayılmaz.
+        let existing = defaults.object(forKey: "SULastCheckTime") != nil || defaults.object(forKey: "SUHasLaunchedBefore") != nil
+        defaults.set(existing ? Date.distantPast : Date(), forKey: installKey)
+        if existing { defaults.set(true, forKey: firstKey); defaults.set(true, forKey: weekKey) }
+    }
+
     static func pending() -> String? {
         let defaults = UserDefaults.standard
-        if defaults.object(forKey: installKey) == nil {
-            // Sparkle daha önce denetim yaptıysa bu Mac'te Tuno zaten kuruluydu: yeni kurulum sayılmaz.
-            let existing = defaults.object(forKey: "SULastCheckTime") != nil
-            defaults.set(existing ? Date.distantPast : Date(), forKey: installKey)
-            if existing { defaults.set(true, forKey: firstKey); defaults.set(true, forKey: weekKey) }
-        }
+        prepare()
         if !defaults.bool(forKey: firstKey) { return "first" }
         if !defaults.bool(forKey: weekKey), let installed = defaults.object(forKey: installKey) as? Date,
            Date().timeIntervalSince(installed) >= 7 * 86400 {
