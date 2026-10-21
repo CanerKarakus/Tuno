@@ -29,6 +29,12 @@ struct SettingEntry: Hashable {
         .init(page: .windows, title: "Kenara sürükleyerek yerleştir", hint: "Kenara sürükleyince yarım, köşeye çeyrek, üste tam ekran yerleşir."),
         .init(page: .windows, title: "Başlığa çift tıklayınca ekranı kapla", hint: "Tekrar çift tıklayınca pencere eski boyutuna döner."),
         .init(page: .windows, title: "Son pencere kapanınca uygulamayı kapat", hint: "Son pencere kapanınca uygulama da kapanır (Finder hariç)."),
+        .init(page: .island, title: "Dynamic Island", hint: "Çentiğin üzerine gelince açılır; boştayken görünmez."),
+        .init(page: .island, title: "Çalan müziği göster", hint: "Spotify ya da Müzik arka plandayken kapak ve ses dalgası görünür; tıklayınca oynatıcı açılır."),
+        .init(page: .island, title: "Siri", hint: "Siri açılınca çentikten sıvı cam bir damla akar; ışığı sesle oynar, cevabı içinde yazar."),
+        .init(page: .island, title: "İndirmeler ve AirDrop", hint: "İndirme ve AirDrop ilerlemesi çentikte görünür. İndirilenler klasörü izni ister."),
+        .init(page: .island, title: "Spotify'da ileri ve geri sarma", hint: "Oynatıcıdaki çubukla şarkıda gezinilir. Spotify'ı denetleme izni ister."),
+        .init(page: .island, title: "Uygulamalar"),
         .init(page: .clipboard, title: "Pano geçmişini kaydet", hint: "Parola yöneticilerinin gizli işaretlediği içerikler kaydedilmez."),
         .init(page: .clipboard, title: "⌘⇧V ile göster", hint: "⌘⇧V ile geçmişi açın, yazarak arayın, ↩ ile yapıştırın. Görseller yalnızca Tuno açıkken tutulur."),
         .init(page: .clipboard, title: "Saklanacak öğe sayısı"),
@@ -64,7 +70,7 @@ func SearchResults(query: String) -> [SearchResult] {
     guard !text.isEmpty else { return [] }
     func matches(_ value: String?) -> Bool { value.map { $0.localizedStandardContains(text) } ?? false }
     let pages = Page.allCases.filter { page in
-        (page != .battery || MacBattery.isAvailable) && (matches(page.title) || matches(page.summary))
+        (page != .battery || MacBattery.isAvailable) && (page != .island || NotchIsland.notchedScreen != nil) && (matches(page.title) || matches(page.summary))
     }
     let settings = SettingEntry.all.filter { matches(L($0.title)) || matches($0.hint.map(L)) }
     return pages.map { SearchResult(page: $0, setting: nil) }

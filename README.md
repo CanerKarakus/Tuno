@@ -55,7 +55,7 @@ Tuno asks for a permission only when a feature needs it. Audio is processed in r
 
 ## License
 
-Tuno is open source under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may download, study, change and use it for any noncommercial purpose. Selling it, publishing it commercially or including it in a paid product is not permitted.
+Tuno's source code is available under the [PolyForm Noncommercial License 1.0.0](LICENSE) (source available, not OSI open source). You may download, study, change and use it for any noncommercial purpose. Selling it, publishing it commercially or including it in a paid product is not permitted.
 
 Copyright © 2026 Caner Karakuş – [Geido Studio](https://geidostudio.com)
 
@@ -72,6 +72,6 @@ Tuno, macOS'ta eksik olan kontrolleri tek bir menü çubuğu uygulamasında topl
 
 **Derle:** Xcode 16 ya da üstüyle `./scripts/build-app.sh`, ardından `open build/Tuno.app`.
 
-**Lisans:** Açık kaynak, [PolyForm Noncommercial 1.0.0](LICENSE). İndirip inceleyebilir, değiştirebilir ve ticari olmayan her amaçla kullanabilirsiniz. Satmak, ticari olarak yayınlamak ya da ücretli bir ürüne katmak lisansa aykırıdır.
+**Lisans:** Kaynak kodu açık, [PolyForm Noncommercial 1.0.0](LICENSE). İndirip inceleyebilir, değiştirebilir ve ticari olmayan her amaçla kullanabilirsiniz. Satmak, ticari olarak yayınlamak ya da ücretli bir ürüne katmak lisansa aykırıdır.
 
 </details>

@@ -440,6 +440,7 @@ struct SupportSettings {
         case .battery: "green"
         case .support: "red"
         case .general, .about: "gray"
+        case .island: "black"
         }
     }
 }

@@ -10,6 +10,7 @@ struct OnboardingRoot: View {
     @Environment(Permissions.self) private var permissions
     @Environment(LanguageStore.self) private var language
     @Environment(ThemeStore.self) private var theme
+    @Environment(NotchIsland.self) private var island
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @State private var languageChoice = AppLanguage.chosen ?? AppLanguage.detected
@@ -42,12 +43,15 @@ struct OnboardingRoot: View {
         }
         .onDisappear {
             permissions.stopPolling()
+            island.siriPreview = false
             model.windowClosed()
-            // Dil ya da görünüm seçilmeden pencere kapatıldıysa, seçim yapılana kadar yeniden açılır.
-            if !AppLanguage.isChosen || AppTheme.chosen == nil {
+            // Dil ya da görünüm seçilmeden ya da yenilikler geçilmeden pencere kapatıldıysa yeniden açılır.
+            if !AppLanguage.isChosen || AppTheme.chosen == nil || ([.whatsNew, .siri].contains(model.phase) && !model.isFinished) {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { WindowOpener.action?(id: "onboarding") }
             }
         }
+        // Siri önizlemesi: yalnızca Yenilikler ekranında ve anahtar açıkken çentikte görünür.
+        .onChange(of: previewOn, initial: true) { _, on in island.siriPreview = on }
         .onChange(of: permissions.allGranted) { _, granted in
             // Tüm izinler verilince kısa bir an "tamam" görünsün, sonra devam.
             guard granted, model.phase == .permissions else { return }
@@ -56,6 +60,8 @@ struct OnboardingRoot: View {
             }
         }
     }
+
+    private var previewOn: Bool { !showHello && [.whatsNew, .siri].contains(model.phase) && island.showsSiri && !model.isFinished }
 
     /// Seçilen görünüm (dil adımından sonra): Otomatik'te macOS'un o anki görünümü.
     private var themeScheme: ColorScheme {
@@ -103,6 +109,10 @@ struct OnboardingRoot: View {
             PermissionsStep()
         case .tour:
             ReadyStep()
+        case .whatsNew:
+            WhatsNewStep()
+        case .siri:
+            SiriStep()
         }
     }
 
@@ -152,6 +162,14 @@ struct OnboardingRoot: View {
                                  busy: permissions.isRequestingAll) {
                     Task { await permissions.requestAll() }
                 }
+            }
+        case .siri:
+            OnboardingButton(title: model.steps.last == .siri ? L("Tuno'yu Kullanmaya Başla") : L("Devam")) {
+                go { model.finishSiri() }
+            }
+        case .whatsNew:
+            OnboardingButton(title: model.steps.last == .whatsNew ? L("Tuno'yu Kullanmaya Başla") : L("Devam")) {
+                go { model.finishWhatsNew() }
             }
         case .tour:
             OnboardingButton(title: model.steps.last == .tour ? L("Tuno'yu Kullanmaya Başla") : L("Devam")) {

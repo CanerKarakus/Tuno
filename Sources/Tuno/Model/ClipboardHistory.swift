@@ -32,6 +32,8 @@ struct ClipItem: Identifiable, Equatable {
 @MainActor
 final class ClipboardHistory {
     private(set) var items: [ClipItem] = []
+    /// Yeni bir şey kopyalanınca kısa özetiyle çağrılır (Dynamic Island).
+    @ObservationIgnored var onCopy: ((String) -> Void)?
     var isEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: Self.enabledKey)
@@ -98,6 +100,11 @@ final class ClipboardHistory {
         guard let content else { return }
         add(ClipItem(content: content, date: Date(),
                      sourceApp: NSWorkspace.shared.frontmostApplication?.localizedName))
+        switch content {
+        case .text(let text): onCopy?(text.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: .newlines)[0])
+        case .image: onCopy?(L("Görsel"))
+        case .files(let urls): onCopy?(urls.count == 1 ? urls[0].lastPathComponent : String(format: L("%d dosya"), urls.count))
+        }
     }
 
     private func add(_ item: ClipItem) {

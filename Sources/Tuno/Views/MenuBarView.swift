@@ -581,6 +581,8 @@ private struct AppsModule: View {
 private struct MenuAppRow: View {
     let app: AudioApp
     @Environment(Mixer.self) private var mixer
+    @Environment(PanelState.self) private var panelState
+    private var panelOpen: Bool { panelState.isOpen }
     @AppStorage(PreferenceKey.maxBoost) private var maxBoost = 1.5
 
     var body: some View {
@@ -615,7 +617,9 @@ private struct MenuAppRow: View {
                     Image(systemName: "waveform")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.green)
-                        .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeating)
+                        // Panel kapalıyken de görünüm yaşıyor: animasyon yalnızca panel açıkken (yoksa müzik
+                        // çalarken ekran yenileme hızında sürekli çizim, ~%10 işlemci).
+                        .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeating, isActive: panelOpen)
                 }
 
                 Spacer(minLength: 4)

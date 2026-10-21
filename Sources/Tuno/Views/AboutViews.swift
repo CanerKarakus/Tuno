@@ -142,7 +142,7 @@ struct AboutView: View {
                     TunoIcon(size: 72)
                     Text("Tuno").font(.title.weight(.bold))
                     Text(String(format: L("Sürüm %@"), version)).foregroundStyle(.secondary)
-                    Text(L("Tuno, Mac'i daha kullanışlı hale getirmek için geliştirilen ücretsiz ve açık kaynaklı bir uygulamadır. Caner Karakuş tarafından Geido Studio çatısı altında geliştirilir."))
+                    Text(L("Tuno, Mac'i daha kullanışlı hale getirmek için geliştirilen ücretsiz bir uygulamadır; kaynak kodu GitHub'da. Caner Karakuş tarafından Geido Studio çatısı altında geliştirilir."))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: 440)

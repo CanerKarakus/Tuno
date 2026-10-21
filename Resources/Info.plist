@@ -30,6 +30,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Tuno, mikrofon testinde giriş seviyesini göstermek için mikrofona erişir. Ses kaydedilmez.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Tuno, çentikteki oynatıcıdan şarkıda ileri ve geri gidebilmek için müzik uygulamasına komut gönderir.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Tuno, her uygulamanın ses düzeyini ayrı ayrı ayarlayabilmek için uygulamaların sesine erişir. Ses kaydedilmez veya hiçbir yere gönderilmez.</string>
 </dict>

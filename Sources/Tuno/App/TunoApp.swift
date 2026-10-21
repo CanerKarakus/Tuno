@@ -27,6 +27,7 @@ struct TunoApp: App {
                 .environment(appDelegate.closeQuitter)
                 .environment(appDelegate.keyboardIndicator)
                 .environment(appDelegate.support)
+                .environment(appDelegate.island)
         }
         .defaultSize(width: 1000, height: 680)
         .windowToolbarStyle(.unified)
@@ -40,6 +41,7 @@ struct TunoApp: App {
                 .environment(appDelegate.permissions)
                 .environment(LanguageStore.shared)
                 .environment(ThemeStore.shared)
+                .environment(appDelegate.island)
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -70,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let finderCut = FinderCutPaste()
     let closeQuitter = CloseButtonQuitter()
     let keyboardIndicator = KeyboardIndicator()
+    let island = NotchIsland()
     private let keyboardTap = KeyboardTap()
     private var statusBar: StatusBarController?
     private var windowSwitcher: WindowSwitcher?
@@ -117,6 +120,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .environment(LanguageStore.shared)
         }
+        island.attach(devices: devices, inputMeter: inputMeter, keepAwake: keepAwake, battery: battery)
+        clipboard.onCopy = { [weak self] summary in self?.island.showCopied(summary) }
         shortcuts.onClipboard = { [weak self] in
             guard let self, self.clipboard.isEnabled else { return }
             self.statusBar?.toggle(mode: .clipboard)
@@ -147,6 +152,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         shortcuts.onKeepAwake = { [weak self] in
             guard let self else { return }
             self.keepAwake.toggle()
+            // Çentikli Mac'te ada gösterir.
+            guard !self.island.isPresented else { return }
             VolumeHUD.shared.show(symbol: self.keepAwake.isActive ? "cup.and.heat.waves.fill" : "cup.and.saucer",
                                   title: self.keepAwake.isActive ? L("Uyanık tutuluyor") : L("Uyku engelleme kapalı"))
         }

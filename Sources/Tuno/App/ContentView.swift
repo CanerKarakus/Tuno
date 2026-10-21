@@ -32,6 +32,9 @@ struct ContentView: View {
                 }
         }
         .onAppear { WindowOpener.action = openWindow }
+        .onReceive(NotificationCenter.default.publisher(for: .tunoOpenPage)) { note in
+            if let page = note.object as? Page { selection = page }
+        }
         // Dil seçilmeden ana pencere kullanılamaz (menü çubuğundan açılsa bile); seçim tek seferliktir.
         .overlay {
             if !language.isChosen || !theme.isChosen {
@@ -70,6 +73,7 @@ struct ContentView: View {
         case .shortcuts: ShortcutsView()
         case .displays: DisplaysView()
         case .windows: WindowsView()
+        case .island: IslandSettingsView()
         case .finder: FinderView()
         case .clipboard: ClipboardSettingsView()
         case .battery: BatteryView()
@@ -109,6 +113,7 @@ private struct Sidebar: View {
                 Section(L("Araçlar")) {
                     row(.displays)
                     row(.windows)
+                    if NotchIsland.notchedScreen != nil { row(.island) }
                     row(.finder)
                     row(.clipboard)
                     if MacBattery.isAvailable { row(.battery) }
@@ -134,7 +139,11 @@ private struct Sidebar: View {
                                 }
                             }
                         } icon: {
-                            Image(systemName: result.page.sidebarSymbol)
+                            if result.page == .island {
+                                Image(nsImage: IslandSymbol.image(side: 16)).renderingMode(.template)
+                            } else {
+                                Image(systemName: result.page.sidebarSymbol)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(.rect)
@@ -147,7 +156,14 @@ private struct Sidebar: View {
     }
 
     private func row(_ page: Page) -> some View {
-        Label(page.title, systemImage: page.sidebarSymbol).tag(page)
+        Group {
+            if page == .island {
+                Label { Text(page.title) } icon: { Image(nsImage: IslandSymbol.image(side: 16)).renderingMode(.template) }
+            } else {
+                Label(page.title, systemImage: page.sidebarSymbol)
+            }
+        }
+        .tag(page)
     }
 }
 
@@ -221,6 +237,7 @@ extension Page {
         case .shortcuts: .indigo
         case .displays: .yellow
         case .windows: .cyan
+        case .island: .black
         case .finder: .blue
         case .clipboard: .brown
         case .battery: .green

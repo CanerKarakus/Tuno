@@ -2,7 +2,7 @@ import AVFoundation
 import AppKit
 import Observation
 
-enum OnboardingPhase: Hashable { case language, theme, permissions, tour }
+enum OnboardingPhase: Hashable { case language, theme, permissions, tour, whatsNew, siri }
 
 /// İlk açılış akışı (en fazla 4 adım, sayfa noktalarıyla):
 /// 1. Dil — seçilmeden ilerlenmez (ilk kurulum ve 1.4.7'den yükseltenler).
@@ -21,6 +21,9 @@ final class OnboardingModel {
 
     private static let snoozeKey = "permissionsSnoozedUntil"
     private static let tourKey = "introTourSeen"
+    private static let whatsNewKey = "whatsNewSeen"
+    /// Bu sürümün yenilikleri; güncelleyenlere bir kez, geçilmeden uygulama açılmaz.
+    private static let whatsNewVersion = "1.6"
 
     /// Açılışta bir kez hesaplanır: `nil` → doğrudan ana pencere.
     static let launchPhase: OnboardingPhase? = plannedSteps().first
@@ -29,7 +32,12 @@ final class OnboardingModel {
         var steps: [OnboardingPhase] = []
         if !AppLanguage.isChosen { steps.append(.language) }
         if AppTheme.chosen == nil { steps.append(.theme) }
-        if !UserDefaults.standard.bool(forKey: tourKey) { steps.append(.tour) }
+        if !UserDefaults.standard.bool(forKey: tourKey) {
+            steps.append(.tour)
+            if NotchIsland.notchedScreen != nil { steps.append(.siri) }   // yeni kurulum: izinlerden önce Siri
+        } else if UserDefaults.standard.string(forKey: whatsNewKey) != whatsNewVersion, NotchIsland.notchedScreen != nil {
+            steps.append(.whatsNew)   // güncelleyenler: tanıtımı görmüş, yenilikleri görmemiş
+        }
         // İzinler en son: verilince ya da "Daha Sonra Hatırlat"a basılınca uygulama açılır.
         // TUNO_SHOW_PERMISSIONS=1: izinler verili olsa da adım gösterilir (yalnızca deneme için).
         let forced = ProcessInfo.processInfo.environment["TUNO_SHOW_PERMISSIONS"] == "1"
@@ -92,6 +100,14 @@ final class OnboardingModel {
         next()
     }
 
+    /// Yeni kurulumda Siri sayfası: 1.6'nın yenilikleri sonradan ayrıca gösterilmez.
+    func finishSiri() { finishWhatsNew() }
+
+    func finishWhatsNew() {
+        UserDefaults.standard.set(Self.whatsNewVersion, forKey: Self.whatsNewKey)
+        next()
+    }
+
     func finishTour() {
         tourSeen = true
         next()
@@ -101,8 +117,8 @@ final class OnboardingModel {
     func windowClosed() {
         guard !isFinished else { return }
         switch phase {
-        case .language, .theme:
-            return   // dil/görünüm seçilmeden kapandı: OnboardingRoot pencereyi yeniden açar
+        case .language, .theme, .whatsNew, .siri:
+            return   // seçim yapılmadan ya da yenilikler geçilmeden kapandı: OnboardingRoot pencereyi yeniden açar
         case .tour:
             tourSeen = true
         case .permissions:

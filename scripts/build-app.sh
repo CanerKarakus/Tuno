@@ -25,6 +25,11 @@ cp "$BIN_DIR/Tuno" "$APP/Contents/MacOS/Tuno"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 ditto "$BIN_DIR/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 
+# Dynamic Island'daki Siri damlasının shader'ı (SwiftUI ShaderLibrary.default). Metal derleyicisi gerekir:
+# xcodebuild -downloadComponent MetalToolchain
+xcrun metal -c "$ROOT/Resources/SiriGlass.metal" -o "$BUILD/SiriGlass.air" -mmacosx-version-min=15.0
+xcrun metallib "$BUILD/SiriGlass.air" -o "$APP/Contents/Resources/default.metallib"
+
 if [[ ! -f "$BUILD/AppIcon.icns" ]]; then
   swift "$ROOT/scripts/make-icon.swift" "$BUILD"
   iconutil -c icns "$BUILD/AppIcon.iconset" -o "$BUILD/AppIcon.icns"

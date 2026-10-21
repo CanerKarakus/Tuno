@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Sistem Ayarları'ndaki renkli, köşeleri yuvarlatılmış simge karosu.
@@ -11,10 +12,38 @@ struct SettingsIcon: View {
             .fill(color.gradient)
             .frame(width: size, height: size)
             .overlay {
-                Image(systemName: symbol)
-                    .font(.system(size: size * 0.55, weight: .semibold))
-                    .foregroundStyle(.white)
+                if symbol == IslandSymbol.name {
+                    Image(nsImage: IslandSymbol.image(side: size * 0.6, line: max(1.2, size * 0.055)))
+                        .renderingMode(.template)
+                        .foregroundStyle(.white)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: size * 0.55, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
             }
+    }
+}
+
+/// Dynamic Island simgesi (SF Symbols'te yok): çentikli bir ekranın üstünde ada kapsülü. Şablon görüntü:
+/// kenar çubuğunda diğer simgeler gibi renk alır, seçilince beyaz olur.
+enum IslandSymbol {
+    static let name = "tuno.island"
+
+    static func image(side: CGFloat, line: CGFloat = 1.3) -> NSImage {
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: true) { rect in
+            NSColor.black.set()
+            let inset = line / 2 + side * 0.04
+            let screen = NSRect(x: inset, y: side * 0.12 + line / 2, width: side - 2 * inset, height: side * 0.76 - line)
+            let frame = NSBezierPath(roundedRect: screen, xRadius: side * 0.16, yRadius: side * 0.16)
+            frame.lineWidth = line
+            frame.stroke()
+            let pill = NSRect(x: side * 0.29, y: screen.minY + side * 0.14, width: side * 0.42, height: side * 0.15)
+            NSBezierPath(roundedRect: pill, xRadius: pill.height / 2, yRadius: pill.height / 2).fill()
+            return true
+        }
+        image.isTemplate = true
+        return image
     }
 }
 

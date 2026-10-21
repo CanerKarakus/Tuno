@@ -103,6 +103,7 @@ final class StatusBarController: NSObject {
         guard !isOpen, let anchor = statusItem.button?.window?.frame else { return }
         isOpen = true
         state.mode = mode
+        state.isOpen = true
         hosting.layoutSubtreeIfNeeded()
         NotificationCenter.default.post(name: .tunoPanelWillOpen, object: nil)
         statusItem.button?.highlight(true)
@@ -139,6 +140,7 @@ final class StatusBarController: NSObject {
     func close() {
         guard isOpen else { return }
         isOpen = false
+        state.isOpen = false
         lastClose = Date()
         NotificationCenter.default.post(name: .tunoPanelDidClose, object: nil)
         statusItem.button?.highlight(false)
@@ -292,6 +294,8 @@ enum PanelMode { case mixer, clipboard }
 @MainActor
 final class PanelState {
     var mode = PanelMode.mixer
+    /// Panel ekranda mı: görünüm kapalıyken de yaşadığı için sürekli animasyonlar buna bağlıdır (pil).
+    var isOpen = false
 }
 
 @MainActor

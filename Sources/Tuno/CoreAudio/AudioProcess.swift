@@ -7,6 +7,7 @@ struct AudioProcess: Hashable {
     let pid: pid_t
     let bundleID: String?
     let isRunningOutput: Bool
+    let isRunningInput: Bool
 
     static func all() -> [AudioProcess] {
         let ownPID = getpid()
@@ -17,11 +18,13 @@ struct AudioProcess: Hashable {
                       pid > 0, pid != ownPID
                 else { return nil }
                 let running = object.read(.init(kAudioProcessPropertyIsRunningOutput), initial: UInt32(0)) ?? 0
+                let input = object.read(.init(kAudioProcessPropertyIsRunningInput), initial: UInt32(0)) ?? 0
                 return AudioProcess(
                     objectID: object,
                     pid: pid,
                     bundleID: object.readString(.init(kAudioProcessPropertyBundleID)),
-                    isRunningOutput: running != 0
+                    isRunningOutput: running != 0,
+                    isRunningInput: input != 0
                 )
             }
     }
@@ -35,6 +38,8 @@ struct AudioApp: Identifiable, Hashable {
     let ownerPID: pid_t
     var processObjects: [AudioObjectID]
     var isPlaying: Bool
+    /// Mikrofonu kullanıyor (görüşme).
+    var isRecording = false
 
     var icon: NSImage {
         NSRunningApplication(processIdentifier: ownerPID)?.icon
@@ -51,6 +56,7 @@ struct AudioApp: Identifiable, Hashable {
             if var existing = apps[key] {
                 existing.processObjects.append(process.objectID)
                 existing.isPlaying = existing.isPlaying || process.isRunningOutput
+                existing.isRecording = existing.isRecording || process.isRunningInput
                 apps[key] = existing
             } else {
                 apps[key] = AudioApp(
@@ -58,7 +64,8 @@ struct AudioApp: Identifiable, Hashable {
                     name: owner.localizedName ?? Self.fallbackName(process),
                     ownerPID: owner.processIdentifier,
                     processObjects: [process.objectID],
-                    isPlaying: process.isRunningOutput
+                    isPlaying: process.isRunningOutput,
+                    isRecording: process.isRunningInput
                 )
             }
         }
