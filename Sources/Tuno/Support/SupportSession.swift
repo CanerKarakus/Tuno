@@ -30,6 +30,29 @@ enum SupportPin {
 
     static var version: String? { UserDefaults.standard.string(forKey: key) }
     static func set(_ version: String?) { UserDefaults.standard.set(version, forKey: key) }
+
+    /// Sabitleme sunucudan kalkınca (panelde "Güncelleme kilidi" açıldı) çağrılır.
+    @MainActor static var onRelease: (() -> Void)?
+    private static var polling = false
+
+    /// Sabitliyse sunucuya sorar: panelde kilit açıldıysa sabitleme kalkar ve son sürüm hemen aranır.
+    /// Oturum gerekmez; açılışta ve her güncelleme denetiminde çağrılır. Ağ yoksa sabitleme olduğu gibi kalır.
+    @MainActor static func pollLock() {
+        guard version != nil, !polling,
+              let url = URL(string: "https://gettuno.info/update-lock.php?id=\(InstallID.value)") else { return }
+        polling = true
+        Task {
+            defer { polling = false }
+            var request = URLRequest(url: url, timeoutInterval: 10)
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            guard let (data, _) = try? await URLSession(configuration: .ephemeral).data(for: request),
+                  let reply = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  reply["unlock"] as? Bool == true, version != nil else { return }
+            set(nil)
+            SupportLog.log("support", "Güncelleme kilidi panelden açıldı")
+            onRelease?()
+        }
+    }
 }
 
 /// Destek modu: kullanıcı, destek ekibinin panelde ürettiği 6 haneli kodu yazıp onaylayınca 30 dakikalık bir
@@ -69,6 +92,11 @@ final class SupportSession {
             UserDefaults.standard.removeObject(forKey: SupportPin.switchedKey)
             if version == UpdateDelegate.currentVersion { notice = String(format: L("Tuno Destek, Tuno'yu %@ sürümüne geçirdi."), version) }
         }
+        SupportPin.onRelease = { [weak self] in
+            self?.pinnedVersion = nil
+            self?.updater.checkInBackground()
+        }
+        SupportPin.pollLock()
         // Sabitlenen sürümden elle başka bir sürüme geçildiyse sabitleme kalkar.
         if let pinned = pinnedVersion, pinned != UpdateDelegate.currentVersion { unpin() }
     }

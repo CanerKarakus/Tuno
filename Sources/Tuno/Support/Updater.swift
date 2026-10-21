@@ -65,6 +65,7 @@ final class Updater {
     }
 
     func checkForUpdates() {
+        SupportPin.pollLock()
         controller?.checkForUpdates(nil)
     }
 
@@ -94,6 +95,8 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
     /// Güncelleme denetimiyle giden anonim bilgiler: macOS sürümü, Mac modeli, işlemci mimarisi ve rastgele kurulum numarası.
     /// Yönetim panelindeki macOS ve Mac dağılımı bunlardan çıkar; kişi ya da cihaz kimliği gönderilmez.
     func feedParameters(for updater: SPUUpdater, sendingSystemProfile sendingProfile: Bool) -> [[String: String]] {
+        // Her denetimde: panelde güncelleme kilidi açıldıysa destek sabitlemesi kalkar.
+        DispatchQueue.main.async { MainActor.assumeIsolated { SupportPin.pollLock() } }
         var parameters = [
             ["key": "os", "value": SystemInfo.osVersion, "displayKey": "macOS", "displayValue": SystemInfo.osVersion],
             ["key": "model", "value": SystemInfo.model, "displayKey": "Mac", "displayValue": SystemInfo.model],
