@@ -25,19 +25,32 @@ struct ClipboardPanelView: View {
     @State private var selection = 0
     @FocusState private var searchFocused: Bool
 
+    private var faceID: FaceID { FaceID.shared }
+
     private var results: [ClipItem] {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return clipboard.items }
-        return clipboard.items.filter { $0.searchText.localizedCaseInsensitiveContains(trimmed) }
+        // Gizli öğelerin içeriği, yüz tanınmadan aramayla da ortaya çıkmasın.
+        return clipboard.items.filter { item in
+            (!item.hidden || faceID.isRevealed) && item.searchText.localizedCaseInsensitiveContains(trimmed)
+        }
     }
 
     var body: some View {
         VStack(spacing: 10) {
             header
             searchField
+            if faceID.verifying {
+                Label(L("Gizli öğeler için kameraya bak…"), systemImage: "faceid")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .symbolEffect(.pulse, options: .repeating)
+                    .transition(.opacity)
+            }
             list
             hint
         }
+        .animation(.easeInOut(duration: 0.2), value: faceID.verifying)
         .padding(12)
         .frame(width: 340)
         .onAppear(perform: reset)
@@ -104,7 +117,9 @@ struct ClipboardPanelView: View {
                     VStack(spacing: 2) {
                         ForEach(Array(items.prefix(100).enumerated()), id: \.element.id) { index, item in
                             ClipRow(item: item, index: index, isSelected: index == selection,
-                                    onPaste: { paste(item) }, onDelete: { clipboard.remove(item) })
+                                    locked: item.hidden && !faceID.isRevealed, canHide: faceID.isUsable,
+                                    onPaste: { paste(item) }, onDelete: { clipboard.remove(item) },
+                                    onToggleHidden: { clipboard.setHidden(item, !item.hidden) })
                                 .id(item.id)
                                 .onHover { if $0 { selection = index } }
                         }
@@ -136,6 +151,7 @@ struct ClipboardPanelView: View {
         query = ""
         selection = 0
         DispatchQueue.main.async { searchFocused = true }
+        if clipboard.hasHidden { Task { _ = await faceID.verify() } }
     }
 
     private func moveSelection(_ offset: Int) {
@@ -151,8 +167,16 @@ struct ClipboardPanelView: View {
     }
 
     private func paste(_ item: ClipItem) {
-        actions.close()
-        clipboard.paste(item)
+        guard item.hidden, !faceID.isRevealed else {
+            actions.close()
+            clipboard.paste(item)
+            return
+        }
+        Task {
+            guard await faceID.verify() else { NSSound.beep(); return }
+            actions.close()
+            clipboard.paste(item)
+        }
     }
 }
 
@@ -160,8 +184,11 @@ private struct ClipRow: View {
     let item: ClipItem
     let index: Int
     let isSelected: Bool
+    var locked = false
+    var canHide = false
     let onPaste: () -> Void
     let onDelete: () -> Void
+    var onToggleHidden: () -> Void = {}
     @State private var hovering = false
 
     var body: some View {
@@ -194,9 +221,30 @@ private struct ClipRow: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onPaste)
         .onHover { hovering = $0 }
+        .contextMenu {
+            if canHide || item.hidden {
+                Button(item.hidden ? L("Gizlemeyi Kaldır") : L("Gizle"), systemImage: item.hidden ? "eye" : "eye.slash") {
+                    onToggleHidden()
+                }
+                .disabled(locked)
+            }
+            Button(L("Geçmişten sil"), systemImage: "trash", role: .destructive, action: onDelete)
+        }
     }
 
     @ViewBuilder private var preview: some View {
+        if locked {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .frame(width: 32, height: 32)
+                .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder private var content: some View {
         switch item.content {
         case .image(let image):
             Image(nsImage: image)
@@ -218,7 +266,8 @@ private struct ClipRow: View {
     }
 
     private var title: String {
-        switch item.content {
+        if locked { return L("Gizli öğe") }
+        return switch item.content {
         case .text(let text): text.trimmingCharacters(in: .whitespacesAndNewlines)
         case .image(let image): String(format: L("Görsel · %d×%d"), Int(image.size.width), Int(image.size.height))
         case .files(let urls):

@@ -74,6 +74,7 @@ struct ContentView: View {
         case .displays: DisplaysView()
         case .windows: WindowsView()
         case .island: IslandSettingsView()
+        case .faceID: FaceIDSettingsView()
         case .finder: FinderView()
         case .clipboard: ClipboardSettingsView()
         case .battery: BatteryView()
@@ -114,6 +115,7 @@ private struct Sidebar: View {
                     row(.displays)
                     row(.windows)
                     if NotchIsland.notchedScreen != nil { row(.island) }
+                    row(.faceID)
                     row(.finder)
                     row(.clipboard)
                     if MacBattery.isAvailable { row(.battery) }
@@ -159,6 +161,8 @@ private struct Sidebar: View {
         Group {
             if page == .island {
                 Label { Text(page.title) } icon: { Image(nsImage: IslandSymbol.image(side: 16)).renderingMode(.template) }
+            } else if page == .faceID {
+                FaceIDSidebarLabel()
             } else {
                 Label(page.title, systemImage: page.sidebarSymbol)
             }
@@ -238,6 +242,7 @@ extension Page {
         case .displays: .yellow
         case .windows: .cyan
         case .island: .black
+        case .faceID: .green
         case .finder: .blue
         case .clipboard: .brown
         case .battery: .green

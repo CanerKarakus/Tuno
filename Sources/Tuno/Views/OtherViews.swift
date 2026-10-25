@@ -47,6 +47,8 @@ struct GeneralView: View {
                     .foregroundStyle(.secondary)
             }
 
+            MenuBarHiderSection()
+
             Section {
                 LabeledContent(L("Sürüm"), value: updater.version)
                 if updater.isConfigured {
@@ -99,5 +101,26 @@ struct GeneralView: View {
             loginError = String(format: L("Girişte başlatma ayarlanamadı: %@"), error.localizedDescription)
         }
         launchAtLogin = SMAppService.mainApp.status == .enabled
+    }
+}
+
+/// Genel › Menü Çubuğu: simgeleri gizleme.
+private struct MenuBarHiderSection: View {
+    var body: some View {
+        @Bindable var hider = MenuBarHider.shared
+        Section {
+            Toggle(isOn: $hider.isEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("Menü çubuğu simgelerini gizle"))
+                    Text(L("Gizlemek istediğin simgeleri ⌘ tuşuna basılı tutup çizginin soluna sürükle. Oka tıklayınca görünürler."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .searchAnchor("Menü çubuğu simgelerini gizle")
+            Toggle(L("10 saniye sonra yeniden gizle"), isOn: $hider.autoHide)
+                .disabled(!hider.isEnabled)
+        } header: {
+            Text(L("Menü Çubuğu"))
+        }
     }
 }

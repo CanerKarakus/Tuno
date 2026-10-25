@@ -35,6 +35,8 @@ struct OnboardingRoot: View {
         .onAppear {
             WindowOpener.action = openWindow
             permissions.startPolling()
+            // Onboarding açıkken ilk yüz taraması beklesin (indirme bitse bile).
+            FaceID.shared.holdAutoEnroll = true
             model.onFinish = {
                 openWindow(id: "main")
                 dismissWindow(id: "onboarding")
@@ -46,7 +48,8 @@ struct OnboardingRoot: View {
             island.siriPreview = false
             model.windowClosed()
             // Dil ya da görünüm seçilmeden ya da yenilikler geçilmeden pencere kapatıldıysa yeniden açılır.
-            if !AppLanguage.isChosen || AppTheme.chosen == nil || ([.whatsNew, .siri].contains(model.phase) && !model.isFinished) {
+            FaceID.shared.holdAutoEnroll = false
+            if !AppLanguage.isChosen || AppTheme.chosen == nil || ([.whatsNew, .siri, .faceID].contains(model.phase) && !model.isFinished) {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { WindowOpener.action?(id: "onboarding") }
             }
         }
@@ -113,6 +116,8 @@ struct OnboardingRoot: View {
             WhatsNewStep()
         case .siri:
             SiriStep()
+        case .faceID:
+            FaceIDStep()
         }
     }
 
@@ -166,6 +171,10 @@ struct OnboardingRoot: View {
         case .siri:
             OnboardingButton(title: model.steps.last == .siri ? L("Tuno'yu Kullanmaya Başla") : L("Devam")) {
                 go { model.finishSiri() }
+            }
+        case .faceID:
+            OnboardingButton(title: model.steps.last == .faceID ? L("Tuno'yu Kullanmaya Başla") : L("Devam")) {
+                go { model.finishFaceID() }
             }
         case .whatsNew:
             OnboardingButton(title: model.steps.last == .whatsNew ? L("Tuno'yu Kullanmaya Başla") : L("Devam")) {

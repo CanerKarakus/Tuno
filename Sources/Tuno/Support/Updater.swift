@@ -106,6 +106,9 @@ final class UpdateDelegate: NSObject, SPUUpdaterDelegate {
             ["key": "lang", "value": AppLanguage.chosen?.rawValue ?? "", "displayKey": "Dil", "displayValue": AppLanguage.chosen?.rawValue ?? ""],
             ["key": "theme", "value": AppTheme.chosen?.rawValue ?? "", "displayKey": "Görünüm", "displayValue": AppTheme.chosen?.rawValue ?? ""],
         ].filter { !($0["value"] ?? "").isEmpty }
+        // Yüz tanıma kullanılıyor mu (model inmiş ve en az bir yüz kayıtlı): yalnızca 1 ya da 0, başka bilgi yok.
+        let face = UserDefaults.standard.bool(forKey: FaceStore.inUseKey) ? "1" : "0"
+        parameters.append(["key": "face", "value": face, "displayKey": "Yüz Tanıma", "displayValue": face])
         // Dönüşüm hunisi için iki tek seferlik işaret: ilk denetim ve kurulumdan bir hafta sonraki ilk denetim.
         sentMilestone = Milestones.pending()
         if let milestone = sentMilestone {

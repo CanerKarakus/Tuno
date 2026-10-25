@@ -38,6 +38,20 @@ struct IslandSettingsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }.searchAnchor("Siri")
+                Toggle(isOn: $island.alertsEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("Sistem bildirimleri"))
+                        Text(L("Pil azalınca, Düşük Güç Modu değişince, Bluetooth cihazı (klavye, fare, hoparlör) bağlanınca ve Wi-Fi ya da VPN değişince çentikte kısa bir bildirim görünür."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }.searchAnchor("Sistem bildirimleri")
+                Toggle(isOn: $island.shelfEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("Dosya rafı"))
+                        Text(L("Dosyayı çentiğe sürükleyince rafa girer; oradan başka uygulamaya sürüklenir. Raftaki dosya yalnızca “Link al”a basınca Tuno sunucusuna yüklenir (en çok 5 GB, 6 saat sonra silinir)."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }.searchAnchor("Dosya rafı")
             }
             .disabled(NotchIsland.notchedScreen == nil)
 
@@ -56,6 +70,13 @@ struct IslandSettingsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }.searchAnchor("Spotify'da ileri ve geri sarma")
+                Toggle(isOn: Binding(get: { island.focusEnabled }, set: { island.setFocus($0) })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("Odak modu"))
+                        Text(L("Odak açılıp kapanınca çentikte kısa bir bildirim görünür. Odak durumu izni ister."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }.searchAnchor("Odak modu")
             } header: {
                 Text(L("İzin Gerektirenler"))
             }
@@ -93,6 +114,24 @@ struct IslandSettingsView: View {
             }
             .searchAnchor("Uygulamalar")
             .disabled(NotchIsland.notchedScreen == nil || !island.isEnabled)
+            if NotchIsland.showsTestButtons {
+                Section {
+                    TestRow(title: L("Pil azaldı (%20)")) { island.signals.lowBattery(percent: 20) }
+                    TestRow(title: L("Pil çok az (%10)")) { island.signals.lowBattery(percent: 10) }
+                    TestRow(title: L("Düşük Güç Modu")) { island.signals.lowPowerMode(on: true) }
+                    TestRow(title: L("Odak modu")) { island.signals.focusMode(on: true) }
+                    TestRow(title: L("Bluetooth klavye")) { island.signals.bluetoothConnected(name: "Magic Keyboard", battery: 86) }
+                    TestRow(title: L("Bluetooth fare")) { island.signals.bluetoothConnected(name: "Magic Mouse", battery: 64) }
+                    TestRow(title: L("Wi-Fi bağlandı")) { island.signals.networkNotice(vpn: false, connected: true) }
+                    TestRow(title: L("Wi-Fi koptu")) { island.signals.networkNotice(vpn: false, connected: false) }
+                    TestRow(title: L("VPN bağlandı")) { island.signals.networkNotice(vpn: true, connected: true) }
+                    TestRow(title: L("Dosya rafı")) { island.demoShelf() }
+                    TestRow(title: L("AirPods")) { island.demoAirPods() }
+                } header: {
+                    Text(L("Dene"))
+                }
+                .disabled(NotchIsland.notchedScreen == nil || !island.isEnabled)
+            }
             PageFooter()
         }
         .formStyle(.grouped)
@@ -106,5 +145,19 @@ struct IslandSettingsView: View {
         panel.prompt = L("Ekle")
         guard panel.runModal() == .OK else { return }
         island.add(panel.urls)
+    }
+}
+
+/// Deneme satırı: düğmeye basınca ilgili bildirim adada örnek olarak görünür.
+private struct TestRow: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Button(L("Dene"), action: action)
+        }
     }
 }

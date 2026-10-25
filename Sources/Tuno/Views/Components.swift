@@ -294,12 +294,17 @@ enum BoostStyle {
 /// büyük renkli simge, başlık ve kısa açıklama. Simge açılışta hafifçe yaylanır.
 struct PageHeader: View {
     let page: Page
+    /// Başlığın sağında "Beta" etiketi.
+    var beta = false
 
     var body: some View {
         HStack(spacing: 12) {
             SettingsIcon(symbol: page.symbol, color: page.tint, size: 40)
             VStack(alignment: .leading, spacing: 2) {
-                Text(page.title).font(.title3.weight(.semibold))
+                HStack(spacing: 7) {
+                    Text(page.title).font(.title3.weight(.semibold))
+                    if beta { BetaBadge() }
+                }
                 Text(page.summary)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)

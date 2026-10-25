@@ -441,6 +441,7 @@ struct SupportSettings {
         case .support: "red"
         case .general, .about: "gray"
         case .island: "black"
+        case .faceID: "green"
         }
     }
 }

@@ -6,6 +6,9 @@
 	     sistem sesi yakalama için gerekir. -->
 	<key>com.apple.security.device.audio-input</key>
 	<true/>
+	<!-- Yüz tanıma (kamera; görüntü yalnızca Mac'te işlenir). -->
+	<key>com.apple.security.device.camera</key>
+	<true/>
 	<!-- Dynamic Island oynatıcısında Spotify'da konuma atlamak (AppleScript). -->
 	<key>com.apple.security.automation.apple-events</key>
 	<true/>

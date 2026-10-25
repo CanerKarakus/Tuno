@@ -2,7 +2,7 @@ import AVFoundation
 import AppKit
 import Observation
 
-enum OnboardingPhase: Hashable { case language, theme, permissions, tour, whatsNew, siri }
+enum OnboardingPhase: Hashable { case language, theme, permissions, tour, whatsNew, siri, faceID }
 
 /// İlk açılış akışı (en fazla 4 adım, sayfa noktalarıyla):
 /// 1. Dil — seçilmeden ilerlenmez (ilk kurulum ve 1.4.7'den yükseltenler).
@@ -24,6 +24,8 @@ final class OnboardingModel {
     private static let whatsNewKey = "whatsNewSeen"
     /// Bu sürümün yenilikleri; güncelleyenlere bir kez, geçilmeden uygulama açılmaz.
     private static let whatsNewVersion = "1.6"
+    /// Yüz tanıma tanıtımı (yeni kurulumda Siri'den sonra, güncelleyenlerde açılışta) bir kez gösterilir.
+    private static let faceIntroKey = "faceIntroSeen"
 
     /// Açılışta bir kez hesaplanır: `nil` → doğrudan ana pencere.
     static let launchPhase: OnboardingPhase? = plannedSteps().first
@@ -38,6 +40,8 @@ final class OnboardingModel {
         } else if UserDefaults.standard.string(forKey: whatsNewKey) != whatsNewVersion, NotchIsland.notchedScreen != nil {
             steps.append(.whatsNew)   // güncelleyenler: tanıtımı görmüş, yenilikleri görmemiş
         }
+        // Yüz tanıma: yeni kurulumda Siri'den sonra; güncelleyenlerde açılışta (ana pencere görünmeden).
+        if !UserDefaults.standard.bool(forKey: faceIntroKey), !FaceModels.shared.isReady { steps.append(.faceID) }
         // İzinler en son: verilince ya da "Daha Sonra Hatırlat"a basılınca uygulama açılır.
         // TUNO_SHOW_PERMISSIONS=1: izinler verili olsa da adım gösterilir (yalnızca deneme için).
         let forced = ProcessInfo.processInfo.environment["TUNO_SHOW_PERMISSIONS"] == "1"
@@ -108,6 +112,11 @@ final class OnboardingModel {
         next()
     }
 
+    func finishFaceID() {
+        UserDefaults.standard.set(true, forKey: Self.faceIntroKey)
+        next()
+    }
+
     func finishTour() {
         tourSeen = true
         next()
@@ -117,7 +126,7 @@ final class OnboardingModel {
     func windowClosed() {
         guard !isFinished else { return }
         switch phase {
-        case .language, .theme, .whatsNew, .siri:
+        case .language, .theme, .whatsNew, .siri, .faceID:
             return   // seçim yapılmadan ya da yenilikler geçilmeden kapandı: OnboardingRoot pencereyi yeniden açar
         case .tour:
             tourSeen = true

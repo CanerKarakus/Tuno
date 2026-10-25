@@ -54,6 +54,7 @@ struct IslandView: View {
                 // Siyah alanın her yeri tıklanabilir (içeriğin boş kalan yerleri dahil).
                 .contentShape(IslandShape(flare: flare, radius: radius))
                 .onTapGesture { island.tapIsland() }
+                .onDrop(of: [.fileURL], isTargeted: nil) { providers in accept(providers) }
                 .shadow(color: .black.opacity(card || pill ? 0.35 : 0), radius: 14, y: 8)
             // Baloncuk içeriğin altında: sıvı köprü adanın ucunu çizer, içeriği örtmemeli.
             if let shownSecondary {
@@ -129,6 +130,25 @@ struct IslandView: View {
         .environment(\.colorScheme, .dark)
     }
 
+    /// Çentiğe bırakılan dosyalar rafa girer.
+    private func accept(_ providers: [NSItemProvider]) -> Bool {
+        let group = DispatchGroup()
+        let lock = NSLock()
+        nonisolated(unsafe) var urls: [URL] = []
+        for provider in providers where provider.canLoadObject(ofClass: URL.self) {
+            group.enter()
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                if let url, url.isFileURL { lock.lock(); urls.append(url); lock.unlock() }
+                group.leave()
+            }
+        }
+        group.notify(queue: .main) {
+            let dropped = urls
+            MainActor.assumeIsolated { island.dropFiles(dropped) }
+        }
+        return true
+    }
+
     @ViewBuilder private func content(_ mode: NotchIsland.Mode) -> some View {
         switch mode {
         case .idle: Color.clear
@@ -151,11 +171,13 @@ struct IslandView: View {
                 case .call: CallView(island: island)
                 case .timer: TimerView(island: island)
                 case .transfer: TransferView(island: island)
+                case .shelf: ShelfView(island: island)
                 }
             }
             .transition(.island)
         case .banner(let banner): BannerView(island: island, banner: banner).transition(mode.isPill ? .island : .islandWide)
         case .siri: Color.clear
+        case .drop: DropZone(island: island).transition(.island)
         }
     }
 }
@@ -179,6 +201,7 @@ private extension NotchIsland.Mode {
         switch self {
         case .expanded(.media): false
         case .expanded: true
+        case .drop: true
         case .banner(let banner): if case .alarm = banner.kind { true } else { false }
         default: false
         }
@@ -193,6 +216,7 @@ private extension NotchIsland.Mode {
         case .expanded(let live): "expanded-\(live)"
         case .banner(let banner): "banner-\(banner.id)"
         case .siri: "siri"
+        case .drop: "drop"
         }
     }
 }
@@ -648,6 +672,8 @@ private struct Bubble: View {
                 }
             case .transfer:
                 Ring(fraction: island.transfer?.fraction ?? 0, color: IslandColor.blue, lineWidth: 2.5).padding(7)
+            case .shelf:
+                Image(systemName: "tray.full.fill").font(.system(size: 13, weight: .semibold)).foregroundStyle(IslandColor.blue)
             }
         }
     }
@@ -699,6 +725,14 @@ private struct CompactRow: View {
                 TransferIcon(airdrop: island.transfer?.airdrop ?? false, size: 20)
             } right: {
                 Ring(fraction: island.transfer?.fraction ?? 0, color: IslandColor.blue).frame(width: 17, height: 17)
+            }
+        case .shelf:
+            Wings(notch: island.notch) {
+                Image(systemName: "tray.full.fill").font(.system(size: 14, weight: .semibold)).foregroundStyle(IslandColor.blue)
+            } right: {
+                Text("\(island.shelf.items.count)")
+                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(IslandColor.blue)
             }
         case .media:
             EmptyView()
@@ -903,6 +937,17 @@ private struct BannerView: View {
                 Text(name).font(.system(size: 12)).foregroundStyle(IslandColor.secondary)
                     .lineLimit(1).truncationMode(.middle)
             }
+        case .notice(let symbol, let tone, let title, let detail):
+            // İnce bildirim: yana ince büyür; solda simge ve başlık, sağda ayrıntı.
+            Wings(notch: notch) {
+                HStack(spacing: 6) {
+                    Image(systemName: symbol).foregroundStyle(tone.color).symbolEffect(.bounce, value: banner.id)
+                    Text(title).lineLimit(1)
+                }
+            } right: {
+                Text(detail).foregroundStyle(tone.color).monospacedDigit().lineLimit(1)
+            }
+            .font(.system(size: 13, weight: .semibold))
         case .alarm(let title, let ringing):
             PillBody(notch: notch) {
                 Image(systemName: "alarm.fill")
@@ -1334,6 +1379,140 @@ enum WaveLevels {
         return levels.indices.map { index in
             let db = 20 * log10(max(levels[index], 1e-6)) + (index < tilt.count ? tilt[index] : 15)
             return CGFloat(min(max((db + 48) / 40, 0), 1))
+        }
+    }
+}
+
+private extension IslandSignals.Notice.Tone {
+    var color: Color {
+        switch self {
+        case .green: IslandColor.green
+        case .yellow: Color(red: 1, green: 0.84, blue: 0.04)
+        case .red: Color(red: 1, green: 0.27, blue: 0.23)
+        case .blue: IslandColor.blue
+        case .orange: IslandColor.orange
+        case .purple: Color(red: 0.75, green: 0.35, blue: 0.95)
+        }
+    }
+}
+
+// MARK: - Dosya rafı
+
+/// Dosya çentiğe yaklaşınca: bırakma alanı.
+private struct DropZone: View {
+    let island: NotchIsland
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(height: island.notch.height)
+            HStack(spacing: 8) {
+                Image(systemName: "tray.and.arrow.down.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(IslandColor.blue)
+                    .symbolEffect(.bounce.down, options: .repeat(.periodic(delay: 0.6)))
+                Text(L("Dosyayı buraya bırak")).font(.system(size: 13, weight: .semibold))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+/// Raf: dosyalar yan yana; her birinin altında "Link al". Sürüklenince Finder gibi kopyalanır.
+private struct ShelfView: View {
+    let island: NotchIsland
+
+    var body: some View {
+        let shelf = island.shelf
+        VStack(spacing: 0) {
+            Wings(notch: island.notch) {
+                Text(L("Dosya rafı")).font(.system(size: 12, weight: .semibold)).foregroundStyle(IslandColor.secondary)
+            } right: {
+                Button { shelf.clear() } label: {
+                    Text(L("Temizle")).font(.system(size: 12, weight: .semibold)).foregroundStyle(IslandColor.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            HStack(alignment: .top, spacing: 10) {
+                ForEach(shelf.items) { item in ShelfTile(shelf: shelf, item: item) }
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        // Gizli dosya varsa raf açılınca kameraya bakılır (Yüz Tanıma).
+        .onAppear { if shelf.hasHidden { Task { _ = await FaceID.shared.verify() } } }
+    }
+}
+
+private struct ShelfTile: View {
+    let shelf: IslandShelf
+    let item: IslandShelf.Item
+
+    private var locked: Bool { item.hidden && !FaceID.shared.isRevealed }
+
+    var body: some View {
+        VStack(spacing: 3) {
+            ZStack(alignment: .topTrailing) {
+                Group {
+                    if locked {
+                        Image(systemName: FaceID.shared.verifying ? "faceid" : "lock.fill")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(IslandColor.secondary)
+                            .symbolEffect(.pulse, options: .repeating, isActive: FaceID.shared.verifying)
+                            .frame(width: 40, height: 40)
+                            .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            .onTapGesture { Task { _ = await FaceID.shared.verify() } }
+                    } else {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: item.url.path))
+                            .resizable().frame(width: 40, height: 40)
+                            // Raftan başka bir uygulamaya sürüklenir (özgün dosya kopyalanır).
+                            .onDrag { NSItemProvider(contentsOf: item.url) ?? NSItemProvider() }
+                    }
+                }
+                .contextMenu {
+                    if FaceID.shared.isUsable || item.hidden {
+                        Button(item.hidden ? L("Gizlemeyi Kaldır") : L("Gizle"), systemImage: item.hidden ? "eye" : "eye.slash") {
+                            shelf.setHidden(item.id, !item.hidden)
+                        }
+                        .disabled(locked)
+                    }
+                }
+                Button { shelf.remove(item.id) } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 13)).foregroundStyle(.white.opacity(0.7), .black)
+                }
+                .buttonStyle(.plain)
+                .offset(x: 7, y: -5)
+            }
+            Text(locked ? L("Gizli dosya") : item.name).font(.system(size: 10, weight: .medium)).lineLimit(1).truncationMode(.middle)
+            if locked { Color.clear.frame(height: 22) } else { action }
+        }
+        .frame(width: 82)
+    }
+
+    @ViewBuilder private var action: some View {
+        switch item.state {
+        case .uploading(let fraction):
+            HStack(spacing: 5) {
+                Ring(fraction: fraction, color: IslandColor.blue, lineWidth: 2).frame(width: 13, height: 13)
+                Text("%\(Int(fraction * 100))").font(.system(size: 10, weight: .semibold).monospacedDigit()).foregroundStyle(IslandColor.secondary)
+            }
+            .frame(height: 22)
+        case .linked(let url):
+            PillButton(symbol: "link", title: L("Kopyala"), tint: IslandColor.green, foreground: .black) {
+                shelf.copyLink(url)
+            }
+            .controlSize(.small)
+        case .failed(let message):
+            PillButton(symbol: "arrow.clockwise", title: message) { shelf.upload(item.id) }
+        case .idle:
+            if item.isFolder {
+                Text(L("Klasör")).font(.system(size: 10)).foregroundStyle(IslandColor.secondary).frame(height: 22)
+            } else if item.tooLarge {
+                Text(L("5 GB'tan büyük")).font(.system(size: 10)).foregroundStyle(IslandColor.secondary).frame(height: 22)
+            } else {
+                PillButton(symbol: "link", title: L("Link al"), tint: IslandColor.blue, foreground: .white) {
+                    shelf.upload(item.id)
+                }
+            }
         }
     }
 }

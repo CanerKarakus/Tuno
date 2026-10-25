@@ -17,12 +17,16 @@ final class NotchIsland {
     enum Live: Hashable {
         case media(String)   // müzik uygulamasının paket kimliği
         case call, timer, transfer
+        /// Dosya rafı: içinde dosya varken çentikte durur; tıklanınca raf açılır.
+        case shelf
     }
 
     enum Mode: Equatable {
         case idle, apps
         case compact(Live), expanded(Live)
         case banner(Banner)
+        /// Bir dosya çentiğe doğru sürükleniyor: ada bırakma alanı olur.
+        case drop
         /// Siri dinliyor: büyük oval, kenarında dönen gökkuşağı ışıltısı.
         case siri
     }
@@ -37,6 +41,8 @@ final class NotchIsland {
             case received(name: String, url: URL, airdrop: Bool)
             /// `ringing`: sesi Tuno çalıyor (Saat uygulamasınınkini Saat çalar).
             case alarm(String, ringing: Bool)
+            /// İnce bildirim (pil azaldı, Odak, Bluetooth cihazı, Wi-Fi/VPN…): yana ince büyür.
+            case notice(symbol: String, tone: IslandSignals.Notice.Tone, title: String, detail: String)
         }
         let id = UUID()
         var kind: Kind
@@ -84,15 +90,34 @@ final class NotchIsland {
     var showsSiri: Bool {
         didSet { UserDefaults.standard.set(showsSiri, forKey: Self.siriKey); watchSiri() }
     }
+    /// Dosya rafı (dosyayı çentiğe sürükle). Varsayılan açık.
+    var shelfEnabled: Bool {
+        didSet { UserDefaults.standard.set(shelfEnabled, forKey: Self.shelfKey); if !shelfEnabled { shelf.clear(); shelf.dragging = false } }
+    }
+    /// İnce bildirimler: pil azaldı, Düşük Güç Modu, Bluetooth cihazı, Wi-Fi/VPN. Varsayılan açık.
+    var alertsEnabled: Bool {
+        didSet { UserDefaults.standard.set(alertsEnabled, forKey: Self.alertsKey); watchAlerts() }
+    }
+    /// Odak modu bildirimi (Odak durumu izni). Açılınca izin istenir.
+    private(set) var focusEnabled: Bool {
+        didSet { UserDefaults.standard.set(focusEnabled, forKey: Self.focusKey) }
+    }
+    let shelf = IslandShelf()
+    @ObservationIgnored let signals = IslandSignals()
     private(set) var pinned: [URL]
 
     static let maxPinned = 8
+    /// Ayarlardaki "Dene" bölümü (yayından önce kapatılır).
+    static let showsTestButtons = false
     private static let enabledKey = "islandEnabled"
     private static let musicKey = "islandShowsMusic"
     private static let siriKey = "islandShowsSiri"
     private static let pinnedKey = "islandPinnedApps"
     private static let transfersKey = "islandTransfers"
     private static let seekKey = "islandSeek"
+    private static let shelfKey = "islandShelf"
+    private static let alertsKey = "islandAlerts"
+    private static let focusKey = "islandFocus"
 
     // MARK: - Durum
 
@@ -150,6 +175,7 @@ final class NotchIsland {
     @ObservationIgnored private var screenFrame: CGRect = .zero
     @ObservationIgnored private var mouseTap: CFMachPort?
     @ObservationIgnored private var hoverTimer: Timer?
+    @ObservationIgnored private var dragTimer: Timer?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var bannerTask: Task<Void, Never>?
     @ObservationIgnored private var countdownTimer: Timer?
@@ -167,6 +193,9 @@ final class NotchIsland {
         isEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey, default: true)
         showsMusic = UserDefaults.standard.bool(forKey: Self.musicKey, default: true)
         showsSiri = UserDefaults.standard.bool(forKey: Self.siriKey, default: true)
+        shelfEnabled = UserDefaults.standard.bool(forKey: Self.shelfKey, default: true)
+        alertsEnabled = UserDefaults.standard.bool(forKey: Self.alertsKey, default: true)
+        focusEnabled = UserDefaults.standard.bool(forKey: Self.focusKey) && IslandSignals.focusAuthorized
         // İzin sonradan geri alındıysa anahtar kapalı görünür.
         transfersEnabled = UserDefaults.standard.bool(forKey: Self.transfersKey) && IslandPermissions.downloadsGranted
         seekEnabled = UserDefaults.standard.bool(forKey: Self.seekKey)
@@ -205,6 +234,16 @@ final class NotchIsland {
         }
         callTimer?.tolerance = 0.3
         watchSiri()
+        signals.onNotice = { [weak self] notice in
+            self?.show(.notice(symbol: notice.symbol, tone: notice.tone, title: notice.title, detail: notice.detail), for: 2.6)
+        }
+        watchAlerts()
+        if focusEnabled { signals.startFocus() }
+        shelf.onLink = { [weak self] _ in self?.show(.copied(L("Link kopyalandı")), for: 2.2) }
+        shelf.onChange = { [weak self] in
+            guard let self else { return }
+            if self.shelf.items.isEmpty, self.expanded == .shelf { self.expanded = nil }
+        }
         DemoHook.install(self)
     }
 
@@ -231,6 +270,7 @@ final class NotchIsland {
         if call != nil { list.append(.call) }
         if countdown != nil { list.append(.timer) }
         if transfer != nil { list.append(.transfer) }
+        if shelfEnabled, !shelf.items.isEmpty { list.append(.shelf) }
         // Öndeki uygulamanınki en sona: başka etkinlik varsa baloncukta durur.
         let media = players.filter(mediaVisible).sorted { lhs, rhs in
             let lhsFront = inFront.contains(lhs.id), rhsFront = inFront.contains(rhs.id)
@@ -249,6 +289,7 @@ final class NotchIsland {
 
     var mode: Mode {
         if siriShown { return .siri }
+        if shelfEnabled, shelf.dragging { return .drop }
         if let banner { return .banner(banner) }
         let list = activities
         if let expanded, list.contains(expanded) { return .expanded(expanded) }
@@ -274,12 +315,13 @@ final class NotchIsland {
         switch mode {
         case .idle: return CGSize(width: w - 8, height: h)   // çentiğin arkasında kalır; yalnızca yanlardan kapanır
         case .siri: return CGSize(width: w - 8, height: h)   // damla çentikten akar (SiriGlass)
+        case .drop: return CGSize(width: w + 2 * 96, height: h + 46)
         case .apps:
             let perSide = max(1, Int(ceil(Double(pinned.count) / 2)))
             return wings(CGFloat(perSide) * 34 + 12)
         case .compact(let live):
             switch live {
-            case .media, .transfer: return wings(36 + grow)
+            case .media, .transfer, .shelf: return wings(36 + grow)
             case .call, .timer: return wings(58 + grow)
             }
         case .expanded(let live):
@@ -287,6 +329,7 @@ final class NotchIsland {
             case .media: return CGSize(width: min(max(w + 220, 420), 440), height: h + 150)
             case .call, .timer: return wings(108, extra: 38)
             case .transfer: return wings(104, extra: 30)
+            case .shelf: return CGSize(width: min(max(w + 220, 400), 440), height: h + 118)
             }
         case .banner(let banner):
             switch banner.kind {
@@ -295,6 +338,10 @@ final class NotchIsland {
             case .received: return wings(110)
             case .copied: return wings(86)
             case .charging, .keepAwake: return wings(100)
+            case .notice(_, _, let title, let detail):
+                // Kanat, metnin uzunluğuna göre açılır (ince kalır, yazı sığar).
+                let left = 24 + 7.4 * CGFloat(title.count), right = 7.4 * CGFloat(detail.count)
+                return wings(max(88, max(left, right) + 26))
             }
         }
     }
@@ -308,6 +355,11 @@ final class NotchIsland {
         case .banner: tapBanner()
         default: break
         }
+    }
+
+    /// Biri ekrana bakıyor (Yüz Tanıma): açık kart kapanır.
+    func collapseForPrivacy() {
+        expanded = nil
     }
 
     func toggleExpanded(_ live: Live) {
@@ -500,6 +552,7 @@ final class NotchIsland {
     private func powerChanged() {
         let now = Self.isPluggedIn()
         defer { pluggedIn = now }
+        signals.batteryChanged()
         guard now == true, pluggedIn == false, let info = MacBattery().info else { return }
         show(.charging(percent: info.percent), for: 3.5)
     }
@@ -847,6 +900,86 @@ final class NotchIsland {
         }
     }
 
+    // MARK: - Sistem bildirimleri ve Odak
+
+    private var alertsStarted = false
+
+    private func watchAlerts() {
+        signals.alertsOn = alertsEnabled
+        guard alertsEnabled, !alertsStarted else { return }
+        alertsStarted = true
+        signals.startLowPower()
+        signals.startBluetooth()
+        signals.startNetwork()
+    }
+
+    /// Odak anahtarı: açılınca Odak durumu izni istenir; verilmezse kapalı kalır.
+    func setFocus(_ on: Bool) {
+        guard on else {
+            focusEnabled = false
+            signals.stopFocus()
+            return
+        }
+        signals.enableFocus { [weak self] granted in self?.focusEnabled = granted }
+    }
+
+    // MARK: - Dosya rafı
+
+    /// Rafa dosya bırakıldı: raf açılır.
+    func dropFiles(_ urls: [URL]) {
+        shelf.dragging = false
+        guard shelfEnabled, shelf.add(urls) > 0 else { return }
+        expanded = .shelf
+        setHovering(true)
+    }
+
+    /// Dosya sürüklenirken (Finder, Masaüstü…) fare çentiğe yaklaşınca ada bırakma alanına dönüşür.
+    private func checkFileDrag() {
+        guard shelfEnabled, NSEvent.pressedMouseButtons & 1 != 0 else { return }
+        let pasteboard = NSPasteboard(name: .drag)
+        guard pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) else { return }
+        let near = hitRect(margin: 70).contains(NSEvent.mouseLocation)
+        if near, !shelf.dragging {
+            shelf.dragging = true
+            updatePanelMouse()
+            var away = 0, released = 0
+            dragTimer?.invalidate()
+            dragTimer = Timer.scheduledTimer(withTimeInterval: 1 / 20, repeats: true) { [weak self] timer in
+                MainActor.assumeIsolated {
+                    guard let self, self.shelf.dragging else { timer.invalidate(); self?.dragTimer = nil; return }
+                    away = self.hitRect(margin: 110).contains(NSEvent.mouseLocation) ? 0 : away + 1
+                    released = NSEvent.pressedMouseButtons & 1 == 0 ? released + 1 : 0
+                    // Uzaklaşıldıysa ya da bırakıldı ama bırakma gelmediyse (drop önce gelir) alan kapanır.
+                    if away >= 6 || released >= 4 {
+                        timer.invalidate()
+                        self.dragTimer = nil
+                        self.shelf.dragging = false
+                        self.updatePanelMouse()
+                    }
+                }
+            }
+        }
+    }
+
+    /// Panel yalnızca fare üzerindeyken, dosya sürüklenirken ya da raf açıkken fare olaylarını alır.
+    private func updatePanelMouse() {
+        panel?.ignoresMouseEvents = !(hovering || shelf.dragging)
+    }
+
+    /// Dosya rafını deneme için: iki örnek dosya rafa girer.
+    func demoShelf() {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "tuno-raf-deneme", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        var urls: [URL] = []
+        for (name, text) in [("Rapor.txt", "Tuno dosya rafı denemesi."), ("Notlar.txt", "İkinci deneme dosyası.")] {
+            let url = folder.appending(path: name)
+            try? text.write(to: url, atomically: true, encoding: .utf8)
+            urls.append(url)
+        }
+        guard panel != nil else { return }
+        dropFiles(urls)
+    }
+
     // MARK: - Panel
 
     private func refresh() {
@@ -938,6 +1071,7 @@ final class NotchIsland {
     }
 
     private func checkMouse() {
+        checkFileDrag()
         guard !hovering, hitRect(margin: 0).contains(NSEvent.mouseLocation) else { return }
         setHovering(true)
     }
@@ -947,7 +1081,7 @@ final class NotchIsland {
         guard hovering != value else { return }
         hovering = value
         if !value { expanded = nil }
-        panel?.ignoresMouseEvents = !value
+        updatePanelMouse()
         hoverTimer?.invalidate()
         hoverTimer = nil
         guard value else { return }

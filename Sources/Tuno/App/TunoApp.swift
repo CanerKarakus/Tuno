@@ -121,6 +121,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(LanguageStore.shared)
         }
         island.attach(devices: devices, inputMeter: inputMeter, keepAwake: keepAwake, battery: battery)
+        MenuBarHider.shared.start()   // Tuno'nun simgesinden sonra: ok onun soluna yerleşir
+        FaceID.shared.start(keepAwake: keepAwake, pauseMedia: { [weak self] in
+            self?.island.players.filter(\.isPlaying).forEach { $0.playPause() }
+        }, privacyChanged: { [weak self] stranger in
+            guard stranger else { return }
+            self?.statusBar?.close()
+            self?.island.collapseForPrivacy()
+        })
         clipboard.onCopy = { [weak self] summary in self?.island.showCopied(summary) }
         shortcuts.onClipboard = { [weak self] in
             guard let self, self.clipboard.isEnabled else { return }

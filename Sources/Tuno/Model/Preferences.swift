@@ -6,7 +6,7 @@ enum PreferenceKey {
 }
 
 enum Page: String, CaseIterable, Identifiable, Hashable {
-    case mixer, output, input, equalizer, pointer, shortcuts, displays, windows, island, finder, clipboard, battery, general, privacy, support, about
+    case mixer, output, input, equalizer, pointer, shortcuts, displays, windows, island, faceID, finder, clipboard, battery, general, privacy, support, about
 
     var id: Self { self }
 
@@ -21,6 +21,7 @@ enum Page: String, CaseIterable, Identifiable, Hashable {
         case .displays: L("Ekranlar")
         case .windows: L("Pencereler")
         case .island: L("Dynamic Island")
+        case .faceID: L("Yüz Tanıma")
         case .finder: L("Finder")
         case .clipboard: L("Pano Geçmişi")
         case .battery: L("Pil")
@@ -42,6 +43,7 @@ enum Page: String, CaseIterable, Identifiable, Hashable {
         case .displays: "sun.max.fill"
         case .windows: "rectangle.on.rectangle"
         case .island: IslandSymbol.name
+        case .faceID: "faceid"
         case .finder: "folder.fill"
         case .clipboard: "doc.on.clipboard.fill"
         case .battery: "battery.75percent"
@@ -66,6 +68,7 @@ extension Page {
         case .displays: L("Harici ekran parlaklığı ve çözünürlüğü.")
         case .windows: L("Alt-Tab, Dock önizlemesi ve yerleştirme.")
         case .island: L("Çentikte çalan müzik ve uygulamalar.")
+        case .faceID: L("Yüzünle kilit açma ve gizlilik.")
         case .finder: L("Kes, Enter ile aç, Delete ile sil.")
         case .clipboard: L("Pano geçmişi.")
         case .battery: L("Pil sağlığı ve şarj.")

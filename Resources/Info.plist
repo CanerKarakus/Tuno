@@ -30,6 +30,10 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Tuno, mikrofon testinde giriş seviyesini göstermek için mikrofona erişir. Ses kaydedilmez.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Tuno, yüz tanıma için kamerayı kullanır. Görüntü yalnızca bu Mac'te işlenir; kaydedilmez ve hiçbir yere gönderilmez.</string>
+	<key>NSFocusStatusUsageDescription</key>
+	<string>Tuno, Odak modu açılıp kapanınca çentikte kısa bir bildirim göstermek için Odak durumunu okur.</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Tuno, çentikteki oynatıcıdan şarkıda ileri ve geri gidebilmek için müzik uygulamasına komut gönderir.</string>
 	<key>NSAudioCaptureUsageDescription</key>

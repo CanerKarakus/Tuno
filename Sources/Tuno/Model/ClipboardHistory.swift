@@ -13,6 +13,8 @@ struct ClipItem: Identifiable, Equatable {
     let content: Content
     let date: Date
     let sourceApp: String?
+    /// Gizli: yalnızca kayıtlı bir yüz tanınınca görünür (Yüz Tanıma).
+    var hidden = false
 
     var searchText: String {
         switch content {
@@ -63,6 +65,23 @@ final class ClipboardHistory {
         limit = storedLimit > 0 ? storedLimit : 50
         load()
         if isEnabled { start() }
+        NotificationCenter.default.addObserver(forName: .tunoFaceIDRemoved, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.unhideAll() }
+        }
+    }
+
+    var hasHidden: Bool { items.contains { $0.hidden } }
+
+    func setHidden(_ item: ClipItem, _ hidden: Bool) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[index].hidden = hidden
+        save()
+    }
+
+    func unhideAll() {
+        guard hasHidden else { return }
+        for index in items.indices { items[index].hidden = false }
+        save()
     }
 
     private func start() {
@@ -108,13 +127,16 @@ final class ClipboardHistory {
     }
 
     private func add(_ item: ClipItem) {
-        // Aynı metin/dosya tekrar kopyalandıysa en üste taşı.
+        // Aynı metin/dosya tekrar kopyalandıysa en üste taşı (gizliyse gizli kalır).
+        var item = item
         items.removeAll { existing in
-            switch (existing.content, item.content) {
+            let same = switch (existing.content, item.content) {
             case (.text(let a), .text(let b)): a == b
             case (.files(let a), .files(let b)): a == b
             default: false
             }
+            if same, existing.hidden { item.hidden = true }
+            return same
         }
         items.insert(item, at: 0)
         trim()
@@ -152,7 +174,7 @@ final class ClipboardHistory {
         case .files(let urls): pasteboard.writeObjects(urls as [NSURL])
         }
         lastChangeCount = pasteboard.changeCount
-        add(ClipItem(content: item.content, date: Date(), sourceApp: item.sourceApp))
+        add(ClipItem(content: item.content, date: Date(), sourceApp: item.sourceApp, hidden: item.hidden))
 
         // Panel kapanıp odak önceki uygulamaya dönsün diye kısa bekle.
         let vKey = KeyboardLayout.keyCode(for: "v", fallback: kVK_ANSI_V)
@@ -168,6 +190,9 @@ final class ClipboardHistory {
         var files: [URL]?
         var date: Date
         var sourceApp: String?
+        /// Gizli öğenin şifreli içeriği (metin ya da dosya yolları).
+        var secret: Data?
+        var hidden: Bool?
     }
 
     private static var storeURL: URL {
@@ -180,10 +205,20 @@ final class ClipboardHistory {
 
     private func save() {
         let stored = items.compactMap { item -> Stored? in
+            if item.hidden {
+                // Gizli öğe diskte şifreli durur; şifrelenemezse kaydedilmez.
+                let plain: Data? = switch item.content {
+                case .text(let text): Data(("t:" + text).utf8)
+                case .files(let urls): Data(("f:" + urls.map(\.path).joined(separator: "\n")).utf8)
+                case .image: nil
+                }
+                guard let plain, let secret = FaceSecret.seal(plain) else { return nil }
+                return Stored(date: item.date, sourceApp: item.sourceApp, secret: secret, hidden: true)
+            }
             switch item.content {
-            case .text(let text): Stored(text: text, date: item.date, sourceApp: item.sourceApp)
-            case .files(let urls): Stored(files: urls, date: item.date, sourceApp: item.sourceApp)
-            case .image: nil
+            case .text(let text): return Stored(text: text, date: item.date, sourceApp: item.sourceApp)
+            case .files(let urls): return Stored(files: urls, date: item.date, sourceApp: item.sourceApp)
+            case .image: return nil
             }
         }
         if let data = try? JSONEncoder().encode(stored) {
@@ -201,6 +236,13 @@ final class ClipboardHistory {
         guard let data = try? Data(contentsOf: Self.storeURL),
               let stored = try? JSONDecoder().decode([Stored].self, from: data) else { return }
         items = stored.compactMap { entry in
+            if let secret = entry.secret {
+                guard let data = FaceSecret.open(secret), let plain = String(data: data, encoding: .utf8) else { return nil }
+                let body = String(plain.dropFirst(2))
+                let content: ClipItem.Content = plain.hasPrefix("f:")
+                    ? .files(body.split(separator: "\n").map { URL(fileURLWithPath: String($0)) }) : .text(body)
+                return ClipItem(content: content, date: entry.date, sourceApp: entry.sourceApp, hidden: true)
+            }
             if let text = entry.text { return ClipItem(content: .text(text), date: entry.date, sourceApp: entry.sourceApp) }
             if let files = entry.files { return ClipItem(content: .files(files), date: entry.date, sourceApp: entry.sourceApp) }
             return nil
