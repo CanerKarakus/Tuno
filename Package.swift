@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Tuno",
-    defaultLocalization: "tr",
+    defaultLocalization: "en",
     platforms: [.macOS(.v15)],
     dependencies: [
         // Site üzerinden dağıtılan sürüm için otomatik güncelleme.
