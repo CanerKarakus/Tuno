@@ -22,7 +22,7 @@ struct GeneralView: View {
             } header: {
                 Text(L("Dil"))
             } footer: {
-                Text(L("Arayüz hemen değişir; macOS menüleri Tuno yeniden başlatılınca güncellenir."))
+                Text(L("Değişiklik hemen uygulanır."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
