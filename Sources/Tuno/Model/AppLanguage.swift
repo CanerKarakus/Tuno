@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 import Observation
@@ -58,9 +59,69 @@ final class LanguageStore {
     }
 
     func set(_ language: AppLanguage) {
+        let previous = current
+        guard previous != language else { return }
+
         UserDefaults.standard.set(language.rawValue, forKey: AppLanguage.key)
+        UserDefaults.standard.set([language.rawValue], forKey: "AppleLanguages")
+        UserDefaults.standard.synchronize()
+
         revision += 1
         NotificationCenter.default.post(name: .tunoAppearanceChoiceChanged, object: nil)
+
+        // SwiftUI content updates live, but the macOS-provided application menu
+        // reads the bundle language at launch time.
+        let alert = NSAlert()
+        alert.messageText = restartTitle(for: language)
+        alert.informativeText = restartMessage(for: language)
+        alert.addButton(withTitle: restartNowTitle(for: language))
+        alert.addButton(withTitle: restartLaterTitle(for: language))
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        let process = Process()
+        process.executableURL = URL(filePath: "/usr/bin/open")
+        process.arguments = ["-n", Bundle.main.bundleURL.path]
+        do {
+            try process.run()
+            NSApp.terminate(nil)
+        } catch {
+            let failure = NSAlert()
+            failure.messageText = "Tuno"
+            failure.informativeText = error.localizedDescription
+            failure.runModal()
+        }
+    }
+
+    private func restartTitle(for language: AppLanguage) -> String {
+        switch language {
+        case .en: "Restart Tuno?"
+        case .es: "¿Reiniciar Tuno?"
+        case .tr: "Tuno yeniden başlatılsın mı?"
+        }
+    }
+
+    private func restartMessage(for language: AppLanguage) -> String {
+        switch language {
+        case .en: "The app interface has changed. Restart Tuno to apply the selected language to the macOS menu bar."
+        case .es: "La interfaz de la app ha cambiado. Reinicia Tuno para aplicar el idioma seleccionado a la barra de menús de macOS."
+        case .tr: "Uygulama arayüzü değişti. Seçilen dili macOS menü çubuğuna uygulamak için Tuno'yu yeniden başlatın."
+        }
+    }
+
+    private func restartNowTitle(for language: AppLanguage) -> String {
+        switch language {
+        case .en: "Restart Now"
+        case .es: "Reiniciar ahora"
+        case .tr: "Şimdi Yeniden Başlat"
+        }
+    }
+
+    private func restartLaterTitle(for language: AppLanguage) -> String {
+        switch language {
+        case .en: "Later"
+        case .es: "Más tarde"
+        case .tr: "Daha Sonra"
+        }
     }
 }
 
