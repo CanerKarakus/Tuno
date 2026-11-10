@@ -59,7 +59,6 @@ final class LanguageStore {
     }
 
     func set(_ language: AppLanguage) {
-        let previous = current
         let systemTag = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])?.first
             ?? Locale.preferredLanguages.first
         let systemLanguage = systemTag.map { String($0.prefix(2)).lowercased() }
@@ -69,11 +68,11 @@ final class LanguageStore {
         UserDefaults.standard.set([language.rawValue], forKey: "AppleLanguages")
         UserDefaults.standard.synchronize()
 
-        guard previous != language || needsMenuUpdate else {
-            revision += 1
-            NotificationCenter.default.post(name: .tunoAppearanceChoiceChanged, object: nil)
-            return
-        }
+        revision += 1
+        NotificationCenter.default.post(name: .tunoAppearanceChoiceChanged, object: nil)
+
+        // No restart is needed when macOS already uses the selected language.
+        guard needsMenuUpdate else { return }
 
         revision += 1
         NotificationCenter.default.post(name: .tunoAppearanceChoiceChanged, object: nil)
