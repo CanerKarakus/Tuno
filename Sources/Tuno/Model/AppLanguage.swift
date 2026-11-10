@@ -60,11 +60,20 @@ final class LanguageStore {
 
     func set(_ language: AppLanguage) {
         let previous = current
-        guard previous != language else { return }
+        let systemTag = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])?.first
+            ?? Locale.preferredLanguages.first
+        let systemLanguage = systemTag.map { String($0.prefix(2)).lowercased() }
+        let needsMenuUpdate = systemLanguage != language.rawValue
 
         UserDefaults.standard.set(language.rawValue, forKey: AppLanguage.key)
         UserDefaults.standard.set([language.rawValue], forKey: "AppleLanguages")
         UserDefaults.standard.synchronize()
+
+        guard previous != language || needsMenuUpdate else {
+            revision += 1
+            NotificationCenter.default.post(name: .tunoAppearanceChoiceChanged, object: nil)
+            return
+        }
 
         revision += 1
         NotificationCenter.default.post(name: .tunoAppearanceChoiceChanged, object: nil)
