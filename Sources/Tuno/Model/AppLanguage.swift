@@ -74,9 +74,6 @@ final class LanguageStore {
         // No restart is needed when macOS already uses the selected language.
         guard needsMenuUpdate else { return }
 
-        revision += 1
-        NotificationCenter.default.post(name: .tunoAppearanceChoiceChanged, object: nil)
-
         // SwiftUI content updates live, but the macOS-provided application menu
         // reads the bundle language at launch time.
         let alert = NSAlert()
