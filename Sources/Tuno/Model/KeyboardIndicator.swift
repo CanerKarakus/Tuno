@@ -44,8 +44,28 @@ final class KeyboardIndicator {
     }
 
     private static func currentSourceName() -> String? {
-        guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
-              let pointer = TISGetInputSourceProperty(source, kTISPropertyLocalizedName) else { return nil }
+        guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else { return nil }
+
+        // Keep Apple's ABC layout understandable regardless of the macOS display language.
+        if let id = property(kTISPropertyInputSourceID, from: source),
+           id == "com.apple.keylayout.ABC" {
+            return "English"
+        }
+
+        // Show other layouts using their language's own name, not macOS's localized name.
+        if let languages = property(kTISPropertyInputSourceLanguages, from: source) as? [String],
+           let language = languages.first {
+            let locale = Locale(identifier: language)
+            if let name = locale.localizedString(forLanguageCode: language) {
+                return name.prefix(1).uppercased() + name.dropFirst()
+            }
+        }
+
+        return property(kTISPropertyLocalizedName, from: source)
+    }
+
+    private static func property(_ key: CFString, from source: TISInputSource) -> String? {
+        guard let pointer = TISGetInputSourceProperty(source, key) else { return nil }
         return Unmanaged<CFString>.fromOpaque(pointer).takeUnretainedValue() as String
     }
 }
